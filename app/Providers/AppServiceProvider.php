@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use App\Support\App\Push\FcmPushSender;
-use App\Support\App\Push\PushSender;
+use App\Services\Push\FcmPushSender;
+use App\Services\Push\PushSender;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -25,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        if ($this->app->environment('testing')) {
+            $this->loadMigrationsFrom(base_path('tests/Support/Database/Migrations'));
+        }
     }
 }

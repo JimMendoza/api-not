@@ -11,6 +11,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        $this->call(AppMobileSeeder::class);
+        // Seeding deshabilitado: el runtime opera sobre datos reales en tramite/app_mobile.
     }
 }

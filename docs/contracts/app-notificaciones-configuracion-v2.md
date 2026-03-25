@@ -27,7 +27,7 @@ Campos canonicos (snake_case):
 - `zona_horaria` (string fija `America/Lima`)
 - `mostrar_contador_no_leidas` (bool)
 
-Campos eliminados (legacy):
+Campos eliminados (v1):
 
 - `solo_tramites_seguidos`
 - `notificar_cambios_estado`

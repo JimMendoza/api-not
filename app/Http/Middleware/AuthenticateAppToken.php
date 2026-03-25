@@ -2,8 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use App\Support\App\Auth\AccessTokenManager;
+use App\Services\Auth\AccessTokenManager;
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 
 class AuthenticateAppToken
 {
@@ -26,7 +27,11 @@ class AuthenticateAppToken
 
         $request->attributes->set('appToken', $token);
         $request->setUserResolver(function () use ($token) {
-            return $token->usuarioApp;
+            if ($token instanceof Model && $token->relationLoaded('authenticatedUser')) {
+                return $token->getRelation('authenticatedUser');
+            }
+
+            return $token->authenticatedUser ?? null;
         });
 
         return $next($request);

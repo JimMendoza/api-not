@@ -3,31 +3,28 @@
 namespace App\Http\Controllers\Api\App;
 
 use App\Http\Requests\Api\App\LoginRequest;
-use App\Models\Empresa;
-use App\Models\UsuarioApp;
-use App\Models\UsuarioAppDispositivo;
-use App\Support\App\Auth\AccessTokenManager;
+use App\Repositories\Identity\RealIdentityRepository;
+use App\Services\Auth\AccessTokenManager;
+use App\Services\Auth\AuthenticatedAppUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AutenticacionController extends ApiController
 {
+    protected RealIdentityRepository $realIdentityRepository;
+
+    public function __construct(RealIdentityRepository $realIdentityRepository)
+    {
+        $this->realIdentityRepository = $realIdentityRepository;
+    }
+
     public function login(LoginRequest $request, AccessTokenManager $accessTokenManager)
     {
-        $empresa = Empresa::query()
-            ->where('codigo', $request->input('codEmp'))
-            ->where('activo', true)
-            ->first();
-
-        if (! $empresa) {
-            return $this->error('Credenciales inválidas.', 401);
-        }
-
-        $usuario = UsuarioApp::query()
-            ->where('empresa_id', $empresa->id)
-            ->where('username', $request->input('username'))
-            ->where('activo', true)
-            ->first();
+        $usuario = $this->realIdentityRepository->findUserForLogin(
+            $request->input('codEmp'),
+            $request->input('username')
+        );
 
         if (! $usuario || ! Hash::check($request->input('password'), $usuario->password)) {
             return $this->error('Credenciales inválidas.', 401);
@@ -37,30 +34,28 @@ class AutenticacionController extends ApiController
 
         return $this->ok([
             'accessToken' => $issuedToken['plainTextToken'],
-            'tokenType' => config('app_mobile.token_type', 'Bearer'),
+            'tokenType' => config('mobile.token_type', 'Bearer'),
         ]);
     }
 
     public function me(Request $request)
     {
-        /** @var \App\Models\UsuarioApp $usuario */
+        /** @var AuthenticatedAppUser $usuario */
         $usuario = $request->user();
-        $usuario->loadMissing('empresa');
 
         return $this->ok([
             'username' => $usuario->username,
-            'fullName' => $usuario->full_name,
+            'fullName' => $usuario->fullName,
             'empresa' => [
-                'codigo' => $usuario->empresa->codigo,
-                // Alias transicional para clientes antiguos: usar `codigo` como canónico.
-                'id' => $usuario->empresa->codigo,
-                'nombre' => $usuario->empresa->nombre,
-                'imagen' => $usuario->empresa->imagen,
+                'codigo' => $usuario->empresaCodigo,
+                'id' => $usuario->empresaCodigo,
+                'nombre' => $usuario->empresaNombre,
+                'imagen' => $usuario->empresaImagen,
             ],
-            'permisos' => $this->appPermissions(),
+            'permisos' => array_values($usuario->permisos ?? []),
             'session' => [
                 'authenticated' => true,
-                'tokenType' => config('app_mobile.token_type', 'Bearer'),
+                'tokenType' => config('mobile.token_type', 'Bearer'),
             ],
         ]);
     }
@@ -73,10 +68,7 @@ class AutenticacionController extends ApiController
             return $this->error('No autenticado.', 401);
         }
 
-        /** @var UsuarioApp|null $usuario */
-        $usuario = $request->user();
-        $this->invalidatePushDevice($request, $usuario);
-
+        $this->invalidatePushDevice($request, $request->user());
         $accessTokenManager->revoke($token);
 
         return $this->ok([
@@ -84,7 +76,7 @@ class AutenticacionController extends ApiController
         ]);
     }
 
-    protected function invalidatePushDevice(Request $request, UsuarioApp $usuario = null)
+    protected function invalidatePushDevice(Request $request, ?AuthenticatedAppUser $usuario): void
     {
         if (! $usuario) {
             return;
@@ -96,12 +88,30 @@ class AutenticacionController extends ApiController
             return;
         }
 
-        UsuarioAppDispositivo::query()
-            ->where('usuario_app_id', $usuario->id)
-            ->where('device_id', $deviceId)
+        DB::connection($this->connectionName())
+            ->table($this->mobileTableName('usuario_dispositivos'))
+            ->where('usuario_id', $usuario->id)
+            ->where('device_id', (string) $deviceId)
             ->update([
                 'activo' => false,
                 'invalidado_at' => now(),
+                'updated_at' => now(),
             ]);
+    }
+
+    protected function connectionName(): string
+    {
+        return (string) config('mobile.connection', config('database.default'));
+    }
+
+    protected function mobileTableName(string $table): string
+    {
+        $connection = DB::connection($this->connectionName());
+
+        if ($connection->getDriverName() === 'pgsql') {
+            return 'app_mobile.'.$table;
+        }
+
+        return 'app_mobile_'.$table;
     }
 }

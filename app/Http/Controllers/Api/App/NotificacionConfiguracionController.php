@@ -3,50 +3,32 @@
 namespace App\Http\Controllers\Api\App;
 
 use App\Http\Requests\Api\App\UpdateNotificacionConfiguracionRequest;
-use App\Models\UsuarioApp;
-use App\Models\UsuarioAppNotificacionConfiguracion;
+use App\Repositories\Notifications\RealNotificationSettingsRepository;
+use App\Services\Auth\AuthenticatedAppUser;
 use Illuminate\Http\Request;
 
 class NotificacionConfiguracionController extends ApiController
 {
+    protected RealNotificationSettingsRepository $realSettings;
+
+    public function __construct(RealNotificationSettingsRepository $realSettings)
+    {
+        $this->realSettings = $realSettings;
+    }
+
     public function show(Request $request)
     {
-        /** @var UsuarioApp $usuario */
+        /** @var AuthenticatedAppUser $usuario */
         $usuario = $request->user();
 
-        $configuracion = UsuarioAppNotificacionConfiguracion::query()
-            ->where('usuario_app_id', $usuario->id)
-            ->first();
-
-        return $this->ok($this->toPayload($configuracion));
+        return $this->ok($this->realSettings->settingsForUser($usuario));
     }
 
     public function update(UpdateNotificacionConfiguracionRequest $request)
     {
-        /** @var UsuarioApp $usuario */
+        /** @var AuthenticatedAppUser $usuario */
         $usuario = $request->user();
 
-        $configuracion = UsuarioAppNotificacionConfiguracion::query()->updateOrCreate(
-            [
-                'usuario_app_id' => $usuario->id,
-            ],
-            $request->validated()
-        );
-
-        return $this->ok($this->toPayload($configuracion));
-    }
-
-    protected function toPayload(UsuarioAppNotificacionConfiguracion $configuracion = null)
-    {
-        $defaults = UsuarioAppNotificacionConfiguracion::defaultSettings();
-
-        if (! $configuracion) {
-            return $defaults;
-        }
-
-        return array_merge(
-            $defaults,
-            $configuracion->only(UsuarioAppNotificacionConfiguracion::settingsKeys())
-        );
+        return $this->ok($this->realSettings->updateForUser($usuario, $request->validated()));
     }
 }

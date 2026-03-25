@@ -2,78 +2,48 @@
 
 namespace App\Http\Controllers\Api\App;
 
-use App\Models\Notificacion;
-use App\Models\UsuarioApp;
+use App\Repositories\Notifications\RealNotificationRepository;
+use App\Services\Auth\AuthenticatedAppUser;
 use Illuminate\Http\Request;
 
 class NotificacionController extends ApiController
 {
+    protected RealNotificationRepository $realNotifications;
+
+    public function __construct(RealNotificationRepository $realNotifications)
+    {
+        $this->realNotifications = $realNotifications;
+    }
+
     public function index(Request $request)
     {
-        /** @var UsuarioApp $usuario */
+        /** @var AuthenticatedAppUser $usuario */
         $usuario = $request->user();
 
-        $notificaciones = Notificacion::query()
-            ->visibleForUsuario($usuario)
-            ->with('tramite')
-            ->orderBy('leida')
-            ->orderByDesc('fecha_hora')
-            ->get();
-
-        return $this->ok($notificaciones->map(function (Notificacion $notificacion) {
-            return $this->notificacionPayload($notificacion);
-        })->values()->all());
+        return $this->ok($this->realNotifications->listVisibleForUser($usuario));
     }
 
     public function resumen(Request $request)
     {
-        /** @var UsuarioApp $usuario */
+        /** @var AuthenticatedAppUser $usuario */
         $usuario = $request->user();
 
-        $noLeidas = Notificacion::query()
-            ->visibleForUsuario($usuario)
-            ->where('leida', false)
-            ->count();
-
         return $this->ok([
-            'noLeidas' => $noLeidas,
+            'noLeidas' => $this->realNotifications->unreadCountForUser($usuario),
         ]);
     }
 
     public function marcarLeida(Request $request, $id)
     {
-        /** @var UsuarioApp $usuario */
+        /** @var AuthenticatedAppUser $usuario */
         $usuario = $request->user();
 
-        $notificacion = Notificacion::query()
-            ->visibleForUsuario($usuario)
-            ->where('id', $id)
-            ->first();
-
-        if (! $notificacion) {
+        if (! $this->realNotifications->markReadForUser($usuario, (int) $id)) {
             return $this->error('Notificación no encontrada.', 404);
         }
-
-        $notificacion->forceFill([
-            'leida' => true,
-        ])->save();
 
         return $this->ok([
             'mensaje' => 'Notificación marcada como leída.',
         ]);
-    }
-
-    protected function notificacionPayload(Notificacion $notificacion)
-    {
-        return [
-            'id' => $notificacion->id,
-            'tramiteId' => (int) $notificacion->tramite_id,
-            'codigoTramite' => optional($notificacion->tramite)->codigo,
-            'titulo' => $notificacion->titulo,
-            'mensaje' => $notificacion->mensaje,
-            'tipo' => $notificacion->tipo,
-            'leida' => (bool) $notificacion->leida,
-            'fechaHora' => optional($notificacion->fecha_hora)->format('Y-m-d H:i'),
-        ];
     }
 }

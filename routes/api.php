@@ -39,11 +39,6 @@ Route::prefix('app')->group(function () {
 
         Route::get('notificaciones', [NotificacionController::class, 'index']);
         Route::get('notificaciones/resumen', [NotificacionController::class, 'resumen']);
-        Route::post('notificaciones/prueba-push', function () {
-            return response()->json([
-                'mensaje' => 'Endpoint deprecado. Use /api/integracion/notificaciones/evento.',
-            ], 410);
-        });
         Route::patch('notificaciones/{id}/leida', [NotificacionController::class, 'marcarLeida'])->where('id', '[0-9]+');
 
         Route::get('notificaciones/configuracion', [NotificacionConfiguracionController::class, 'show']);
@@ -54,6 +49,6 @@ Route::prefix('app')->group(function () {
 Route::prefix('integracion')
     ->middleware('integracion.token')
     ->group(function () {
-        Route::post('notificaciones/evento', 'IntegracionNotificacionEventoController');
+        Route::post('notificaciones/evento', 'Api\\Integracion\\NotificacionEventoController');
     });
 
