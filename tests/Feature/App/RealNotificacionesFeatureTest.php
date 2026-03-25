@@ -52,6 +52,19 @@ class RealNotificacionesFeatureTest extends TestCase
             'ESTADO_ID' => 1,
         ]);
 
+        $this->seedRemito([
+            'ID' => 803,
+            'NUMERO_DOCUMENTO' => 'TRM-NOTI-803',
+            'NUMERO_EMISION' => '0000001803',
+            'ASUNTO' => 'Tramite historico',
+            'OBSERVACION' => null,
+            'FECHA_EMISION' => '2026-03-24 09:30:00',
+            'FECHA' => '2026-03-24 09:00:00',
+            'ADMINISTRADO_ID' => 'movil.user',
+            'COD_EMP' => 'EMP-001',
+            'ESTADO_ID' => 1,
+        ]);
+
         DB::table('app_mobile_tramite_seguimientos')->insert([
             [
                 'usuario_id' => 101,
@@ -64,6 +77,13 @@ class RealNotificacionesFeatureTest extends TestCase
                 'usuario_id' => 101,
                 'tramite_id' => 802,
                 'activo' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'usuario_id' => 101,
+                'tramite_id' => 803,
+                'activo' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -118,6 +138,18 @@ class RealNotificacionesFeatureTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'id' => 9005,
+                'usuario_id' => 101,
+                'tramite_id' => 803,
+                'titulo' => 'Histórica visible',
+                'mensaje' => 'Mensaje 5',
+                'tipo' => 'estado',
+                'leida' => false,
+                'fecha_hora' => '2026-03-24 09:30:00',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         $headers = [
@@ -128,7 +160,7 @@ class RealNotificacionesFeatureTest extends TestCase
             ->getJson('/api/app/notificaciones/resumen')
             ->assertOk()
             ->assertExactJson([
-                'noLeidas' => 2,
+                'noLeidas' => 3,
             ]);
 
         $this->withHeaders($headers)
@@ -154,6 +186,16 @@ class RealNotificacionesFeatureTest extends TestCase
                     'tipo' => 'estado',
                     'leida' => false,
                     'fechaHora' => '2026-03-24 11:00',
+                ],
+                [
+                    'id' => 9005,
+                    'tramiteId' => 803,
+                    'codigoTramite' => 'TRM-NOTI-803',
+                    'titulo' => 'Histórica visible',
+                    'mensaje' => 'Mensaje 5',
+                    'tipo' => 'estado',
+                    'leida' => false,
+                    'fechaHora' => '2026-03-24 09:30',
                 ],
                 [
                     'id' => 9003,
@@ -183,7 +225,7 @@ class RealNotificacionesFeatureTest extends TestCase
             ->getJson('/api/app/notificaciones/resumen')
             ->assertOk()
             ->assertExactJson([
-                'noLeidas' => 1,
+                'noLeidas' => 2,
             ]);
 
         $this->withHeaders($headers)

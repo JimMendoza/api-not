@@ -8,6 +8,15 @@ use Illuminate\Support\Facades\DB;
 
 class RealNotificationRepository
 {
+    public function hasActiveFollowForUser(AuthenticatedAppUser $usuario, int $tramiteId): bool
+    {
+        return $this->mobileTable('tramite_seguimientos')
+            ->where('usuario_id', $usuario->id)
+            ->where('tramite_id', $tramiteId)
+            ->where('activo', true)
+            ->exists();
+    }
+
     public function listVisibleForUser(AuthenticatedAppUser $usuario): array
     {
         return collect($this->connection()->select(
@@ -155,13 +164,7 @@ class RealNotificationRepository
             .'where n.usuario_id = ? '
                 .'and r."DELETED_AT" is null '
                 .'and trim(r."ADMINISTRADO_ID") = ? '
-                .'and trim(r."COD_EMP") = ? '
-                .'and exists ('
-                    .'select 1 from '.$this->mobileTableName('tramite_seguimientos').' ts '
-                    .'where ts.usuario_id = n.usuario_id '
-                        .'and ts.tramite_id = n.tramite_id '
-                        .'and ts.activo = true'
-                .')';
+                .'and trim(r."COD_EMP") = ?';
     }
 
     protected function orderBySql(): string

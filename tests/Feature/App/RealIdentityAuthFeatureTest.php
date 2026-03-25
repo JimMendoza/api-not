@@ -70,6 +70,28 @@ class RealIdentityAuthFeatureTest extends TestCase
             ]);
     }
 
+    public function test_me_usa_nom_usuario_como_fallback_de_nombre_visible()
+    {
+        $token = $this->loginRealIdentityUser([
+            'username' => '20131257750',
+            'nomUsuario' => 'Nombre Perfil Visible',
+            'fullName' => [
+                'nombres' => '',
+                'apellidoPaterno' => '',
+                'apellidoMaterno' => '',
+            ],
+        ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+        ])->getJson('/api/app/me')
+            ->assertOk()
+            ->assertJson([
+                'username' => '20131257750',
+                'fullName' => 'Nombre Perfil Visible',
+            ]);
+    }
+
     public function test_entidades_lee_empresas_reales_activas()
     {
         $this->seedRealIdentityContext();

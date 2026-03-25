@@ -285,6 +285,85 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
         $this->assertSame(0, $fakeSender->calls);
     }
 
+    public function test_tramite_no_seguido_no_crea_inbox_ni_envia_push()
+    {
+        $contexto = $this->crearContextoReal();
+
+        DB::table('app_mobile_tramite_seguimientos')
+            ->where('usuario_id', 101)
+            ->where('tramite_id', $contexto['tramiteId'])
+            ->update([
+                'activo' => false,
+                'updated_at' => now(),
+            ]);
+
+        DB::table('app_mobile_usuario_dispositivos')->insert([
+            'usuario_id' => 101,
+            'device_id' => 'device-int-real-not-followed',
+            'push_token' => 'token-int-real-not-followed',
+            'platform' => 'android',
+            'activo' => true,
+            'ultimo_registro_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $fakeSender = new class implements PushSender {
+            public $calls = 0;
+
+            public function provider()
+            {
+                return 'fcm';
+            }
+
+            public function isConfigured()
+            {
+                return true;
+            }
+
+            public function send(UsuarioDispositivo $dispositivo, array $message)
+            {
+                $this->calls++;
+
+                return [
+                    'success' => true,
+                    'invalidToken' => false,
+                    'providerMessageId' => 'projects/demo/messages/not-followed',
+                    'errorCode' => null,
+                    'errorMessage' => null,
+                ];
+            }
+        };
+
+        $this->app->instance(PushSender::class, $fakeSender);
+
+        $this->withHeaders($this->integrationHeaders())
+            ->postJson('/api/integracion/notificaciones/evento', [
+                'tramiteId' => $contexto['tramiteId'],
+                'evento' => 'tramite_derivado',
+            ])
+            ->assertOk()
+            ->assertJson([
+                'mensaje' => 'Evento de notificación procesado correctamente.',
+                'notificacion' => null,
+                'push' => [
+                    'configured' => true,
+                    'attemptedDevices' => 0,
+                    'sentDevices' => 0,
+                    'invalidatedDevices' => 0,
+                    'reason' => 'not_followed',
+                ],
+            ]);
+
+        $this->assertDatabaseMissing('app_mobile_notificaciones', [
+            'usuario_id' => 101,
+            'tramite_id' => $contexto['tramiteId'],
+            'tipo' => 'tramite_derivado',
+        ]);
+
+        $this->assertSame(0, $fakeSender->calls);
+    }
+
     protected function integrationHeaders()
     {
         return [

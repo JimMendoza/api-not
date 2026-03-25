@@ -36,6 +36,15 @@ class PushNotificationService
             ];
         }
 
+        $tramiteId = isset($tramite['id']) ? (int) $tramite['id'] : 0;
+
+        if ($tramiteId <= 0 || ! $this->notifications->hasActiveFollowForUser($usuario, $tramiteId)) {
+            return [
+                'notificacion' => null,
+                'push' => $this->result($this->sender->isConfigured(), 0, 0, 0, 'not_followed'),
+            ];
+        }
+
         $row = $this->notifications->createForUser($usuario, $tramite, $attributes);
         $payload = $this->notifications->payloadFromRow($row);
 

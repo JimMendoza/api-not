@@ -154,7 +154,7 @@ class RealIdentityRepository
             return $nombreUsuario;
         }
 
-        return $this->normalizeValue($row->cod_usuario);
+        return '';
     }
 
     protected function tableName(string $schema, string $table): string

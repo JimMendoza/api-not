@@ -33,7 +33,7 @@ class AuthenticatedAppUser implements AuthenticatableContract
 
         $this->codUsuario = $this->codUsuario ?? $this->username;
         $this->cod_usuario = $this->cod_usuario ?? $this->codUsuario;
-        $this->fullName = $this->fullName ?? $this->full_name ?? $this->username;
+        $this->fullName = $this->fullName ?? $this->full_name ?? '';
         $this->full_name = $this->full_name ?? $this->fullName;
         $this->empresaCodigo = $this->empresaCodigo ?? $this->empresa_codigo ?? null;
         $this->empresa_codigo = $this->empresa_codigo ?? $this->empresaCodigo;
