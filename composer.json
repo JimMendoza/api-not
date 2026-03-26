@@ -1,7 +1,7 @@
 {
-    "name": "laravel/laravel",
+    "name": "jimmendoza/api-not",
     "type": "project",
-    "description": "The Laravel Framework.",
+    "description": "Backend API for NOT mobile integration.",
     "keywords": [
         "framework",
         "laravel"
