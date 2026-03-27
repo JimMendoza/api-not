@@ -36,6 +36,7 @@ class RealPushDeviceRepository
             ->update([
                 'activo' => false,
                 'invalidado_at' => now(),
+                'updated_at' => now(),
             ]);
     }
 
@@ -63,6 +64,7 @@ class RealPushDeviceRepository
             ->update([
                 'activo' => false,
                 'invalidado_at' => now(),
+                'updated_at' => now(),
             ]);
     }
 

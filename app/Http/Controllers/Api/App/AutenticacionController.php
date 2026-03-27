@@ -4,19 +4,23 @@ namespace App\Http\Controllers\Api\App;
 
 use App\Http\Requests\Api\App\LoginRequest;
 use App\Repositories\Identity\RealIdentityRepository;
+use App\Repositories\Notifications\RealPushDeviceRepository;
 use App\Services\Auth\AccessTokenManager;
 use App\Services\Auth\AuthenticatedAppUser;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AutenticacionController extends ApiController
 {
     protected RealIdentityRepository $realIdentityRepository;
+    protected RealPushDeviceRepository $realPushDeviceRepository;
 
-    public function __construct(RealIdentityRepository $realIdentityRepository)
-    {
+    public function __construct(
+        RealIdentityRepository $realIdentityRepository,
+        RealPushDeviceRepository $realPushDeviceRepository
+    ) {
         $this->realIdentityRepository = $realIdentityRepository;
+        $this->realPushDeviceRepository = $realPushDeviceRepository;
     }
 
     public function login(LoginRequest $request, AccessTokenManager $accessTokenManager)
@@ -88,30 +92,6 @@ class AutenticacionController extends ApiController
             return;
         }
 
-        DB::connection($this->connectionName())
-            ->table($this->mobileTableName('usuario_dispositivos'))
-            ->where('usuario_id', $usuario->id)
-            ->where('device_id', (string) $deviceId)
-            ->update([
-                'activo' => false,
-                'invalidado_at' => now(),
-                'updated_at' => now(),
-            ]);
-    }
-
-    protected function connectionName(): string
-    {
-        return (string) config('mobile.connection', config('database.default'));
-    }
-
-    protected function mobileTableName(string $table): string
-    {
-        $connection = DB::connection($this->connectionName());
-
-        if ($connection->getDriverName() === 'pgsql') {
-            return 'app_mobile.'.$table;
-        }
-
-        return 'app_mobile_'.$table;
+        $this->realPushDeviceRepository->invalidateForUser($usuario, (string) $deviceId);
     }
 }

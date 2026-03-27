@@ -7,24 +7,23 @@ return [
     | View Storage Paths
     |--------------------------------------------------------------------------
     |
-    | Most templating systems load templates from disk. Here you may specify
-    | an array of paths that should be checked for your views. Of course
-    | the usual Laravel view path has already been registered for you.
+    | api-not is API-only and does not ship application Blade views. This
+    | configuration remains because Laravel still boots the ViewServiceProvider
+    | for framework-level rendering and exception handling support.
     |
     */
 
-    'paths' => [
+    'paths' => array_values(array_filter([
         resource_path('views'),
-    ],
+    ], 'is_dir')),
 
     /*
     |--------------------------------------------------------------------------
     | Compiled View Path
     |--------------------------------------------------------------------------
     |
-    | This option determines where all the compiled Blade templates will be
-    | stored for your application. Typically, this is within the storage
-    | directory. However, as usual, you are free to change this value.
+    | This option determines where any compiled Blade templates would be
+    | stored if the framework needs them.
     |
     */
 
