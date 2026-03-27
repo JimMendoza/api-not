@@ -33,10 +33,7 @@ class UsuarioToken extends AppMobileModel
     {
         return $query
             ->whereNull('revoked_at')
-            ->where(function ($subQuery) {
-                $subQuery
-                    ->whereNull('expires_at')
-                    ->orWhere('expires_at', '>', now());
-            });
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '>', now());
     }
 }

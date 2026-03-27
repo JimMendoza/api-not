@@ -126,9 +126,9 @@ Mapeo actual de `evento -> tipo` en BD:
 }
 ```
 
-Errores:
+## Errores
 
-- `401` token de integracion invalido
-- `422` request invalido
-- `404` tramite no encontrado
-- `503` integracion no configurada
+- `401` con `{"mensaje": "No autorizado."}`
+- `422` con `{"mensaje": "Datos inválidos.", "errores": {...}}`
+- `404` con `{"mensaje": "Trámite no encontrado."}`
+- `503` con `{"mensaje": "Integración no configurada."}`

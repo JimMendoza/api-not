@@ -3,6 +3,7 @@
 namespace Tests\Feature\App;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\App\Concerns\SeedsRealIdentityContext;
 use Tests\TestCase;
@@ -40,6 +41,13 @@ class RealIdentityAuthFeatureTest extends TestCase
             'empresa_codigo' => 'EMP-001',
             'token_type' => config('mobile.token_type', 'Bearer'),
         ]);
+
+        $storedToken = DB::table('app_mobile_usuario_tokens')
+            ->where('usuario_id', 101)
+            ->first();
+
+        $this->assertNotNull($storedToken);
+        $this->assertNotNull($storedToken->expires_at);
     }
 
     public function test_me_devuelve_contrato_real_desde_tramite()
@@ -90,6 +98,56 @@ class RealIdentityAuthFeatureTest extends TestCase
                 'username' => '20131257750',
                 'fullName' => 'Nombre Perfil Visible',
             ]);
+    }
+
+    public function test_token_expirado_no_autentica()
+    {
+        $token = $this->loginRealIdentityUser();
+
+        DB::table('app_mobile_usuario_tokens')
+            ->update([
+                'expires_at' => now()->subMinute(),
+                'updated_at' => now(),
+            ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+        ])->getJson('/api/app/me')
+            ->assertStatus(401)
+            ->assertExactJson([
+                'mensaje' => 'No autenticado.',
+            ]);
+    }
+
+    public function test_request_autenticado_renueva_expiracion_del_token()
+    {
+        Carbon::setTestNow(Carbon::parse('2026-03-27 10:00:00'));
+
+        $token = $this->loginRealIdentityUser();
+        $hashedToken = hash('sha256', $token);
+
+        $initialExpiration = Carbon::parse(
+            DB::table('app_mobile_usuario_tokens')
+                ->where('token', $hashedToken)
+                ->value('expires_at')
+        );
+
+        Carbon::setTestNow(Carbon::parse('2026-03-28 10:00:00'));
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+        ])->getJson('/api/app/me')
+            ->assertOk();
+
+        $renewedExpiration = Carbon::parse(
+            DB::table('app_mobile_usuario_tokens')
+                ->where('token', $hashedToken)
+                ->value('expires_at')
+        );
+
+        $this->assertTrue($renewedExpiration->gt($initialExpiration));
+
+        Carbon::setTestNow();
     }
 
     public function test_entidades_contrato_final_es_publico_por_post()

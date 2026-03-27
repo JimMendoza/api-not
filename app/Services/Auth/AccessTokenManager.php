@@ -27,7 +27,7 @@ class AccessTokenManager
             'empresa_codigo' => $usuario->empresaCodigo,
             'token' => $hashedToken,
             'token_type' => $this->tokenType(),
-            'expires_at' => null,
+            'expires_at' => $this->nextExpiration(),
             'last_used_at' => now(),
             'revoked_at' => null,
         ]);
@@ -66,6 +66,7 @@ class AccessTokenManager
 
         $token->forceFill([
             'last_used_at' => now(),
+            'expires_at' => $this->nextExpiration(),
         ])->save();
 
         $token->setRelation('authenticatedUser', $usuario);
@@ -94,5 +95,15 @@ class AccessTokenManager
     protected function tokenType(): string
     {
         return (string) config('mobile.token_type', 'Bearer');
+    }
+
+    protected function nextExpiration()
+    {
+        return now()->addDays($this->tokenTtlDays());
+    }
+
+    protected function tokenTtlDays(): int
+    {
+        return max(1, (int) config('mobile.token_ttl_days', 30));
     }
 }

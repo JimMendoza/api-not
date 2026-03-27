@@ -8,7 +8,7 @@ Fecha de corte: 2026-03-27
 - Error de dominio: `{"mensaje": "..."}`
 - Error de validacion: `{"mensaje": "Datos inválidos.", "errores": {...}}`
 - Error de auth app: `401` con `{"mensaje": "No autenticado."}`
-- Error de auth integracion: `401` con `{"mensaje": "Token de integración inválido."}`
+- Error de auth integracion: `401` con `{"mensaje": "No autorizado."}`
 
 ## Contratos App
 
@@ -46,6 +46,7 @@ Fecha de corte: 2026-03-27
 }
 ```
 - Error `401`: `{"mensaje": "Credenciales inválidas."}`
+- Regla de sesion: el token movil expira a los `30` dias y cada request autenticado renueva la expiracion otros `30` dias desde el ultimo uso.
 
 ### `POST /api/app/logout`
 - Auth: si

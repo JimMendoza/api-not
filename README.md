@@ -11,6 +11,7 @@ Backend movil sobre Laravel para NOT, conectado a la BD unica `tramite` y con pe
 - Queue: `database`
 - Push: FCM HTTP v1
 - Auth movil: token propio en `app_mobile.usuario_tokens`
+- TTL de token movil: 30 dias renovables en cada request autenticado
 - Hoja de ruta: pendiente funcional, responde `501` controlado
 
 ## Estructura relevante
@@ -52,6 +53,7 @@ CACHE_TABLE=cache
 QUEUE_CONNECTION=database
 MOBILE_PUSH_QUEUE=push
 MOBILE_LOG_CHANNEL=stack
+MOBILE_TOKEN_TTL_DAYS=30
 
 FCM_ENABLED=true
 FCM_PROJECT_ID=not-gore-callao
@@ -117,6 +119,7 @@ vendor/bin/phpunit tests/Feature
 
 - `/api/app/me` es la fuente unica de verdad del usuario autenticado.
 - `POST /api/app/login` solo autentica y emite token.
+- Los tokens moviles vencen a los 30 dias y cada request autenticado renueva la expiracion otros 30 dias desde el ultimo uso.
 - `POST /api/app/entidades` es publico y sin auth.
 - Inbox historico: una notificacion ya creada sigue visible aunque el tramite deje de seguirse luego.
 - Emision futura: si el tramite no tiene seguimiento activo, no se crea inbox ni se despacha push y la integracion responde `reason = not_followed`.
@@ -126,6 +129,7 @@ vendor/bin/phpunit tests/Feature
 ## Troubleshooting rapido
 
 - `401 No autenticado.`: revisar bearer token y `app_mobile.usuario_tokens`.
+- `401 No autorizado.` en integracion: revisar `INTEGRACION_API_TOKEN` y header enviado.
 - `503` en integracion: falta `INTEGRACION_API_TOKEN`.
 - Push no llega: revisar `FCM_*`, dispositivo activo en `app_mobile.usuario_dispositivos` y worker `queue:work` corriendo.
 - Error de cache/throttle: confirmar `CACHE_DRIVER=database` y existencia de `public.cache`.
