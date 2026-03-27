@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\App\AutenticacionController;
 use App\Http\Controllers\Api\App\DispositivoPushController;
 use App\Http\Controllers\Api\App\EntidadController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Api\App\ModuloController;
 use App\Http\Controllers\Api\App\NotificacionConfiguracionController;
 use App\Http\Controllers\Api\App\NotificacionController;
 use App\Http\Controllers\Api\App\TramiteController;
+use App\Http\Controllers\Api\Integracion\NotificacionEventoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +51,8 @@ Route::prefix('app')->group(function () {
 Route::prefix('integracion')
     ->middleware('integracion.token')
     ->group(function () {
-        Route::post('notificaciones/evento', 'Api\\Integracion\\NotificacionEventoController');
+        Route::post('notificaciones/evento', [NotificacionEventoController::class, '__invoke']);
     });
+
+
 
