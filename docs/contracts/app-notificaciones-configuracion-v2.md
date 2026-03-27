@@ -1,6 +1,6 @@
 # App Notificaciones Configuracion v2
 
-Fecha de corte: 2026-03-23
+Fecha de corte: 2026-03-27
 
 ## Estado
 
@@ -95,7 +95,7 @@ Error `422`:
 
 ```json
 {
-  "mensaje": "Datos invalidos.",
+  "mensaje": "Datos inválidos.",
   "errores": {
     "hora_silencio_inicio": ["..."],
     "mostrar_contador_no_leidas": ["..."]
@@ -105,9 +105,9 @@ Error `422`:
 
 ## Regla de envio push asociada
 
-- El inbox (`notificaciones`) siempre se crea.
 - Si `silenciar_fuera_de_horario=true` y la hora actual en `America/Lima` cae dentro de la ventana `[hora_silencio_inicio, hora_silencio_fin)`, el push no se envia.
 - Si la ventana cruza medianoche (ej. `22:00` -> `07:00`), la regla se evalua como tramo nocturno continuo.
+- La configuracion no anula la regla de seguimiento: sin seguimiento activo no se crea inbox ni se despacha push.
 
 Reason de push en este caso:
 

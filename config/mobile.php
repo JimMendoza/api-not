@@ -5,6 +5,10 @@ return [
 
     'token_type' => 'Bearer',
 
+    'log_channel' => env('MOBILE_LOG_CHANNEL', env('LOG_CHANNEL', 'stack')),
+
+    'push_queue' => env('MOBILE_PUSH_QUEUE', 'push'),
+
     'permission_systems' => [
         'mesa_partes_virtual' => '014',
         'notificaciones' => '009',

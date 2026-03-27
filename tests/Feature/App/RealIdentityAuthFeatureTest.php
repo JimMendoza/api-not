@@ -92,7 +92,7 @@ class RealIdentityAuthFeatureTest extends TestCase
             ]);
     }
 
-    public function test_entidades_lee_empresas_reales_activas()
+    public function test_entidades_contrato_final_es_publico_por_post()
     {
         $this->seedRealIdentityContext();
 
@@ -113,5 +113,25 @@ class RealIdentityAuthFeatureTest extends TestCase
                     'imagen' => 'logo-real.png',
                 ],
             ]);
+
+        $this->getJson('/api/app/entidades')
+            ->assertStatus(405);
+    }
+
+    public function test_modulos_requiere_auth_y_devuelve_catalogo_configurado()
+    {
+        $this->getJson('/api/app/modulos')
+            ->assertStatus(401)
+            ->assertExactJson([
+                'mensaje' => 'No autenticado.',
+            ]);
+
+        $token = $this->loginRealIdentityUser();
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+        ])->getJson('/api/app/modulos')
+            ->assertOk()
+            ->assertExactJson(config('mobile.modules'));
     }
 }

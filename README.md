@@ -1,78 +1,133 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# api-not
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+Backend movil sobre Laravel para NOT, conectado a la BD unica `tramite` y con persistencia propia en el esquema `app_mobile`.
 
-## About Laravel
+## Runtime actual
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Framework: Laravel 6
+- PHP: 7.4+
+- BD: PostgreSQL `tramite`
+- Cache: `database` sobre `public.cache`
+- Queue: `database`
+- Push: FCM HTTP v1
+- Auth movil: token propio en `app_mobile.usuario_tokens`
+- Hoja de ruta: pendiente funcional, responde `501` controlado
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Estructura relevante
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- `app/Http/Controllers/Api/App`: endpoints moviles
+- `app/Http/Controllers/Api/Integracion`: endpoints de integracion
+- `app/Http/Middleware`: auth de app e integracion
+- `app/Repositories/Identity`: acceso a `seguridad` y `maestro`
+- `app/Repositories/Tramites`: lectura real de `virtual.REMITO` y seguimiento
+- `app/Repositories/Notifications`: inbox, configuracion y dispositivos push
+- `app/Services/Auth`: emision y resolucion de tokens moviles
+- `app/Services/Push`: proveedor FCM y orquestacion de inbox/push
+- `app/Jobs`: jobs asincronos de push
+- `database/migrations`: migraciones reales activas
+- `docs/contracts`: contratos backend publicados
 
-## Learning Laravel
+## Variables criticas de entorno
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Minimas:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```env
+APP_NAME="api-not"
+APP_ENV=local
+APP_KEY=
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
 
-## Laravel Sponsors
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=tramite
+DB_USERNAME=postgres
+DB_PASSWORD=
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+CACHE_DRIVER=database
+CACHE_CONNECTION=pgsql
+CACHE_TABLE=cache
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[British Software Development](https://www.britishsoftware.co)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- [UserInsights](https://userinsights.com)
-- [Fragrantica](https://www.fragrantica.com)
-- [SOFTonSOFA](https://softonsofa.com/)
-- [User10](https://user10.com)
-- [Soumettre.fr](https://soumettre.fr/)
-- [CodeBrisk](https://codebrisk.com)
-- [1Forge](https://1forge.com)
-- [TECPRESSO](https://tecpresso.co.jp/)
-- [Runtime Converter](http://runtimeconverter.com/)
-- [WebL'Agence](https://weblagence.com/)
-- [Invoice Ninja](https://www.invoiceninja.com)
-- [iMi digital](https://www.imi-digital.de/)
-- [Earthlink](https://www.earthlink.ro/)
-- [Steadfast Collective](https://steadfastcollective.com/)
-- [We Are The Robots Inc.](https://watr.mx/)
-- [Understand.io](https://www.understand.io/)
-- [Abdel Elrafa](https://abdelelrafa.com)
-- [Hyper Host](https://hyper.host)
-- [Appoly](https://www.appoly.co.uk)
-- [OP.GG](https://op.gg)
+QUEUE_CONNECTION=database
+MOBILE_PUSH_QUEUE=push
+MOBILE_LOG_CHANNEL=stack
 
-## Contributing
+FCM_ENABLED=true
+FCM_PROJECT_ID=not-gore-callao
+FCM_SERVICE_ACCOUNT_JSON_PATH=storage/app/firebase/service-account.json
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+INTEGRACION_API_TOKEN=<token-seguro>
+```
 
-## Code of Conduct
+## Instalacion local
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+1. `composer install`
+2. Configurar `.env`
+3. `php artisan key:generate` si el proyecto aun no tiene `APP_KEY`
+4. `php artisan migrate`
+5. `php artisan optimize:clear`
+6. `php artisan config:cache`
 
-## Security Vulnerabilities
+## Ejecucion local
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+API HTTP:
 
-## License
+```powershell
+php artisan serve --host=0.0.0.0 --port=8000
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Worker para push:
+
+```powershell
+php artisan queue:work --queue=push --tries=3
+```
+
+## Contratos publicados
+
+- `docs/contracts/app-api-v1.md`
+- `docs/contracts/app-me-v1.md`
+- `docs/contracts/app-notificaciones-configuracion-v2.md`
+- `docs/contracts/integracion-notificaciones-evento-v1.md`
+- `docs/contracts/app-mvp-matrix-v1.md`
+
+## Validacion tecnica
+
+```powershell
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:list --path=api
+vendor/bin/phpunit tests/Feature
+```
+
+## Smoke minimo
+
+1. `POST /api/app/entidades`
+2. `POST /api/app/login`
+3. `GET /api/app/me`
+4. `GET /api/app/tramites`
+5. `GET /api/app/notificaciones`
+6. `GET /api/app/notificaciones/resumen`
+7. `GET /api/app/notificaciones/configuracion`
+8. `PUT /api/app/dispositivos/push-token`
+9. `POST /api/integracion/notificaciones/evento`
+10. `GET /api/app/tramites/{id}/hoja-ruta` esperando `501`
+
+## Reglas de negocio criticas
+
+- `/api/app/me` es la fuente unica de verdad del usuario autenticado.
+- `POST /api/app/login` solo autentica y emite token.
+- `POST /api/app/entidades` es publico y sin auth.
+- Inbox historico: una notificacion ya creada sigue visible aunque el tramite deje de seguirse luego.
+- Emision futura: si el tramite no tiene seguimiento activo, no se crea inbox ni se despacha push y la integracion responde `reason = not_followed`.
+- Push usa `inbox-first`: primero se crea la notificacion elegible y luego se despacha el job de push.
+- Quiet hours se evalua siempre en `America/Lima`.
+
+## Troubleshooting rapido
+
+- `401 No autenticado.`: revisar bearer token y `app_mobile.usuario_tokens`.
+- `503` en integracion: falta `INTEGRACION_API_TOKEN`.
+- Push no llega: revisar `FCM_*`, dispositivo activo en `app_mobile.usuario_dispositivos` y worker `queue:work` corriendo.
+- Error de cache/throttle: confirmar `CACHE_DRIVER=database` y existencia de `public.cache`.
+- `queue_dispatch_failed`: revisar `QUEUE_CONNECTION`, tablas `jobs/failed_jobs` y worker.
+- `501` en hoja-ruta: comportamiento esperado mientras no exista fuente real de movimientos.

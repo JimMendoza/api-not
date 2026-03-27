@@ -1,16 +1,16 @@
 # App Push Notifications v1 (Deprecado)
 
-Fecha de deprecacion: 2026-03-23
+Fecha de deprecacion: 2026-03-27
 
-Este documento queda solo como referencia historica.
+Documento historico. Los contratos vigentes son:
 
-Los contratos vigentes son:
+- `docs/contracts/app-api-v1.md`
+- `docs/contracts/integracion-notificaciones-evento-v1.md`
+- `docs/contracts/app-notificaciones-configuracion-v2.md`
 
-- `POST /api/integracion/notificaciones/evento` en `docs/contracts/integracion-notificaciones-evento-v1.md`
-- Configuracion de notificaciones v2 en `docs/contracts/app-notificaciones-configuracion-v2.md`
+Notas vigentes:
 
-Cambios principales respecto a v1:
-
-- Se elimina el modelo anterior de configuracion (`solo_tramites_seguidos`, `notificar_cambios_estado`, `notificar_movimientos_hoja_ruta`, `solo_eventos_importantes`, `frecuencia_notificacion`).
-- La regla de entrega push ahora usa quiet hours por usuario (`silenciar_fuera_de_horario`, `hora_silencio_inicio`, `hora_silencio_fin`, `zona_horaria`).
-- El flujo inbox-first se mantiene: siempre se crea inbox y luego se evalua el envio push.
+- Quiet hours se evalua solo en `America/Lima`.
+- Inbox historico se mantiene visible aunque el seguimiento se desactive luego.
+- Emision futura de nuevas notificaciones solo ocurre si existe seguimiento activo.
+- Para eventos elegibles, el flujo es inbox-first y luego dispatch asincrono del push por cola.

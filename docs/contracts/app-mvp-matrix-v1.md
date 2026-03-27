@@ -1,8 +1,8 @@
 # Matriz Backend MVP - Contratos App Móvil v1
 
-Fecha de corte: 2026-03-19
+Fecha de corte: 2026-03-27
 
-## Alcance (consumo Flutter reportado)
+## Alcance oficial
 - `POST /api/app/entidades`
 - `POST /api/app/login`
 - `GET /api/app/me`
@@ -18,44 +18,39 @@ Fecha de corte: 2026-03-19
 - `PATCH /api/app/notificaciones/{id}/leida`
 - `GET /api/app/notificaciones/configuracion`
 - `PUT /api/app/notificaciones/configuracion`
+- `PUT /api/app/dispositivos/push-token`
+- `DELETE /api/app/dispositivos/push-token`
+- `POST /api/integracion/notificaciones/evento`
 
-## Envelope y errores oficiales
-- Éxito: JSON directo (sin `data`), código HTTP 2xx.
-- Error estándar de dominio/controlador: `{"mensaje": "..."}`.
-- Error de validación (`ApiRequest`): `{"mensaje": "Datos inválidos.", "errores": {...}}` con `422`.
-- Error de autenticación middleware token: `{"mensaje": "No autenticado."}` con `401`.
-
-## Naming canónico
-- Trámites: camelCase (`estadoActual`, `notificacionesNoLeidas`, `fechaHora`, `nroDoc`).
-- Notificaciones: camelCase (`tramiteId`, `codigoTramite`, `fechaHora`).
-- Configuración de notificaciones: snake_case (compatibilidad histórica del recurso).
-- Entidad: `codigo` canónico, `id` alias transicional.
-
-## Estado por endpoint (MVP)
-- `POST /api/app/entidades`: **inestable**
+## Estado por endpoint
+- `POST /api/app/entidades`: **congelado**
 - `POST /api/app/login`: **congelado**
 - `GET /api/app/me`: **congelado**
-- `POST /api/app/logout`: **casi congelado**
+- `POST /api/app/logout`: **congelado**
 - `GET /api/app/modulos`: **congelado**
-- `GET /api/app/tramites`: **casi congelado**
-- `GET /api/app/tramites/{id}`: **casi congelado**
-- `GET /api/app/tramites/{id}/hoja-ruta`: **casi congelado**
-- `POST /api/app/tramites/{id}/seguir`: **casi congelado**
-- `DELETE /api/app/tramites/{id}/seguir`: **casi congelado**
-- `GET /api/app/notificaciones`: **casi congelado**
-- `GET /api/app/notificaciones/resumen`: **casi congelado**
-- `PATCH /api/app/notificaciones/{id}/leida`: **casi congelado**
+- `GET /api/app/tramites`: **congelado**
+- `GET /api/app/tramites/{id}`: **congelado**
+- `POST /api/app/tramites/{id}/seguir`: **congelado**
+- `DELETE /api/app/tramites/{id}/seguir`: **congelado**
+- `GET /api/app/notificaciones`: **congelado**
+- `GET /api/app/notificaciones/resumen`: **congelado**
+- `PATCH /api/app/notificaciones/{id}/leida`: **congelado**
 - `GET /api/app/notificaciones/configuracion`: **congelado**
 - `PUT /api/app/notificaciones/configuracion`: **congelado**
+- `PUT /api/app/dispositivos/push-token`: **congelado**
+- `DELETE /api/app/dispositivos/push-token`: **congelado**
+- `POST /api/integracion/notificaciones/evento`: **congelado**
+- `GET /api/app/tramites/{id}/hoja-ruta`: **pendiente controlado** (`501`)
 
-## Compatibilidades transicionales
-- `empresa.id` en `/api/app/me` y `/api/app/entidades` se mantiene como alias de `empresa.codigo`/`codigo`.
+## Reglas oficiales de no ruptura
+- `/api/app/me` sigue siendo la fuente unica de verdad del usuario autenticado.
+- `login` queda limitado a autenticacion y emision de token.
+- `POST /api/app/entidades` es el metodo final y no requiere auth.
+- `empresa.id` se mantiene como alias transicional de `codigo`.
+- Configuracion de notificaciones mantiene snake_case.
+- Inbox historico: notificaciones ya creadas siguen visibles.
+- Emision futura: solo con seguimiento activo; en caso contrario `reason = not_followed`.
 
-## No romper sin aprobación
-- Rutas y métodos HTTP publicados bajo `/api/app/*`.
-- `401` con `{"mensaje":"No autenticado."}` en endpoints protegidos.
-- Contrato de `/api/app/me` como fuente única de verdad de usuario autenticado.
-- `login` limitado a autenticación (`accessToken`, `tokenType`).
-- `logout` debe revocar token vigente y responder éxito lógico.
-- `hoja-ruta` debe mantener shape, orden ascendente por `fecha_hora` y `404` en trámite no visible.
-- Contrato de configuración de notificaciones en snake_case.
+## Documento principal
+
+Contrato consolidado: `docs/contracts/app-api-v1.md`

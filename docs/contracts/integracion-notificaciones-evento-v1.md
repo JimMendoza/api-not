@@ -1,10 +1,10 @@
 # Integracion Notificaciones Evento v1
 
-Fecha de corte: 2026-03-20
+Fecha de corte: 2026-03-27
 
 ## Objetivo
 
-Canal unico para eventos del sistema principal que crea inbox y luego intenta push real.
+Canal unico para eventos del sistema principal que crea inbox elegible y despacha push real por cola.
 
 ## Endpoint
 
@@ -43,8 +43,9 @@ Eventos soportados:
 
 - Si `tramiteId` no existe o no esta visible/activo para su usuario destino: `404`.
 - Si `evento` no esta soportado: `422`.
-- Primero se crea inbox (`notificaciones`), luego se intenta push.
-- Si push falla, no se pierde inbox.
+- Si el tramite no tiene seguimiento activo para el usuario destino, no se crea inbox ni se despacha push y la respuesta devuelve `reason = not_followed`.
+- Si el tramite si tiene seguimiento activo, primero se crea inbox (`notificaciones`) y luego se despacha el job push.
+- Si el push falla en worker, no se pierde inbox.
 - Nunca se persiste `tipo = prueba_push`.
 
 Mapeo actual de `evento -> tipo` en BD:
@@ -54,7 +55,7 @@ Mapeo actual de `evento -> tipo` en BD:
 - `cambio_estado -> estado`
 - `movimiento_hoja_ruta -> movimiento_hoja_ruta`
 
-## Response 200
+## Response 200 con seguimiento activo
 
 ```json
 {
@@ -67,28 +68,45 @@ Mapeo actual de `evento -> tipo` en BD:
     "mensaje": "El trámite TRM-001 fue derivado a Gerencia General.",
     "tipo": "tramite_derivado",
     "leida": false,
-    "fechaHora": "2026-03-20 16:00"
+    "fechaHora": "2026-03-27 16:00"
   },
   "push": {
     "provider": "fcm",
     "configured": true,
+    "queued": true,
     "attemptedDevices": 1,
-    "sentDevices": 1,
+    "sentDevices": 0,
     "invalidatedDevices": 0,
-    "reason": null
+    "reason": "queued"
   }
 }
 ```
 
-## Payload push FCM emitido
+## Response 200 sin seguimiento activo
 
-`PushNotificationService` envia:
+```json
+{
+  "mensaje": "Evento de notificación procesado correctamente.",
+  "notificacion": null,
+  "push": {
+    "provider": "fcm",
+    "configured": true,
+    "queued": false,
+    "attemptedDevices": 0,
+    "sentDevices": 0,
+    "invalidatedDevices": 0,
+    "reason": "not_followed"
+  }
+}
+```
+
+## Payload push FCM emitido por worker
 
 ```json
 {
   "notification": {
-    "title": "Tramite derivado",
-    "body": "El tramite TRM-001 fue derivado a Gerencia General."
+    "title": "Trámite derivado",
+    "body": "El trámite TRM-001 fue derivado a Gerencia General."
   },
   "data": {
     "notificationId": "101",
@@ -111,16 +129,6 @@ Mapeo actual de `evento -> tipo` en BD:
 Errores:
 
 - `401` token de integracion invalido
-- `422` request invalido (`evento` no soportado, etc.)
+- `422` request invalido
 - `404` tramite no encontrado
-- `503` integracion no configurada (`INTEGRACION_API_TOKEN` ausente)
-
-## Endpoint anterior
-
-`POST /api/app/notificaciones/prueba-push` queda deprecado y responde `410`:
-
-```json
-{
-  "mensaje": "Endpoint deprecado. Use /api/integracion/notificaciones/evento."
-}
-```
+- `503` integracion no configurada

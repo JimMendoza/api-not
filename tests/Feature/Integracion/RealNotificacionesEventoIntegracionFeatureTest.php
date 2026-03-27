@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Integracion;
 
+use App\Jobs\SendPushNotificationJob;
 use App\Models\AppMobile\UsuarioDispositivo;
 use App\Models\AppMobile\UsuarioNotificacionConfiguracion;
 use App\Services\Push\PushSender;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Tests\Feature\App\Concerns\SeedsRealIdentityContext;
 use Tests\TestCase;
 
@@ -26,7 +28,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
         config()->set('services.integration.token', $this->integrationToken);
     }
 
-    public function test_evento_valido_crea_inbox_real_y_envia_push_real()
+    public function test_evento_valido_crea_inbox_real_y_encola_push_real()
     {
         $contexto = $this->crearContextoReal();
 
@@ -41,34 +43,9 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $fakeSender = new class implements PushSender {
-            public $lastMessage;
-
-            public function provider()
-            {
-                return 'fcm';
-            }
-
-            public function isConfigured()
-            {
-                return true;
-            }
-
-            public function send(UsuarioDispositivo $dispositivo, array $message)
-            {
-                $this->lastMessage = $message;
-
-                return [
-                    'success' => true,
-                    'invalidToken' => false,
-                    'providerMessageId' => 'projects/demo/messages/real-1',
-                    'errorCode' => null,
-                    'errorMessage' => null,
-                ];
-            }
-        };
-
+        $fakeSender = $this->configuredFakeSender();
         $this->app->instance(PushSender::class, $fakeSender);
+        Queue::fake();
 
         $this->withHeaders($this->integrationHeaders())
             ->postJson('/api/integracion/notificaciones/evento', [
@@ -89,10 +66,11 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
                 'push' => [
                     'provider' => 'fcm',
                     'configured' => true,
+                    'queued' => true,
                     'attemptedDevices' => 1,
-                    'sentDevices' => 1,
+                    'sentDevices' => 0,
                     'invalidatedDevices' => 0,
-                    'reason' => null,
+                    'reason' => 'queued',
                 ],
             ]);
 
@@ -103,11 +81,14 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'leida' => 0,
         ]);
 
-        $this->assertSame((string) $contexto['tramiteId'], data_get($fakeSender->lastMessage, 'data.tramiteId'));
-        $this->assertSame('tramite_derivado', data_get($fakeSender->lastMessage, 'data.tipo'));
-        $this->assertSame('notificaciones', data_get($fakeSender->lastMessage, 'data.targetScreen'));
-        $this->assertSame('1', data_get($fakeSender->lastMessage, 'data.noLeidas'));
-        $this->assertSame(1, data_get($fakeSender->lastMessage, 'android.notification.notification_count'));
+        Queue::assertPushed(SendPushNotificationJob::class, function (SendPushNotificationJob $job) use ($contexto) {
+            return $job->usuarioId === 101
+                && $job->empresaCodigo === 'EMP-001'
+                && data_get($job->notificationPayload, 'tramiteId') === $contexto['tramiteId']
+                && data_get($job->notificationPayload, 'tipo') === 'tramite_derivado';
+        });
+
+        $this->assertSame(0, $fakeSender->calls);
     }
 
     public function test_evento_invalido_retorna_422_runtime_real()
@@ -155,28 +136,13 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $fakeSender = new class implements PushSender {
-            public function provider()
-            {
-                return 'fcm';
-            }
-
-            public function isConfigured()
-            {
-                return true;
-            }
-
-            public function send(UsuarioDispositivo $dispositivo, array $message)
-            {
-                return [
-                    'success' => false,
-                    'invalidToken' => false,
-                    'providerMessageId' => null,
-                    'errorCode' => 'INTERNAL',
-                    'errorMessage' => 'Error provider',
-                ];
-            }
-        };
+        $fakeSender = $this->configuredFakeSender([
+            'success' => false,
+            'invalidToken' => false,
+            'providerMessageId' => null,
+            'errorCode' => 'INTERNAL',
+            'errorMessage' => 'Error provider',
+        ]);
 
         $this->app->instance(PushSender::class, $fakeSender);
 
@@ -190,9 +156,10 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
                 'push' => [
                     'provider' => 'fcm',
                     'configured' => true,
+                    'queued' => true,
                     'attemptedDevices' => 1,
                     'sentDevices' => 0,
-                    'reason' => 'send_failed',
+                    'reason' => 'queued',
                 ],
             ]);
 
@@ -202,6 +169,8 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'tipo' => 'movimiento_hoja_ruta',
             'leida' => 0,
         ]);
+
+        $this->assertSame(1, $fakeSender->calls);
     }
 
     public function test_push_se_silencia_en_quiet_hours_runtime_real()
@@ -230,34 +199,9 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $fakeSender = new class implements PushSender {
-            public $calls = 0;
-
-            public function provider()
-            {
-                return 'fcm';
-            }
-
-            public function isConfigured()
-            {
-                return true;
-            }
-
-            public function send(UsuarioDispositivo $dispositivo, array $message)
-            {
-                $this->calls++;
-
-                return [
-                    'success' => true,
-                    'invalidToken' => false,
-                    'providerMessageId' => 'projects/demo/messages/real-silent',
-                    'errorCode' => null,
-                    'errorMessage' => null,
-                ];
-            }
-        };
-
+        $fakeSender = $this->configuredFakeSender();
         $this->app->instance(PushSender::class, $fakeSender);
+        Queue::fake();
 
         Carbon::setTestNow(Carbon::parse('2026-03-23 23:30:00', 'America/Lima')->setTimezone('UTC'));
 
@@ -272,6 +216,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
                     'push' => [
                         'provider' => 'fcm',
                         'configured' => true,
+                        'queued' => false,
                         'attemptedDevices' => 0,
                         'sentDevices' => 0,
                         'invalidatedDevices' => 0,
@@ -282,10 +227,11 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             Carbon::setTestNow();
         }
 
+        Queue::assertNothingPushed();
         $this->assertSame(0, $fakeSender->calls);
     }
 
-    public function test_tramite_no_seguido_no_crea_inbox_ni_envia_push()
+    public function test_tramite_no_seguido_no_crea_inbox_ni_encola_push()
     {
         $contexto = $this->crearContextoReal();
 
@@ -308,34 +254,9 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $fakeSender = new class implements PushSender {
-            public $calls = 0;
-
-            public function provider()
-            {
-                return 'fcm';
-            }
-
-            public function isConfigured()
-            {
-                return true;
-            }
-
-            public function send(UsuarioDispositivo $dispositivo, array $message)
-            {
-                $this->calls++;
-
-                return [
-                    'success' => true,
-                    'invalidToken' => false,
-                    'providerMessageId' => 'projects/demo/messages/not-followed',
-                    'errorCode' => null,
-                    'errorMessage' => null,
-                ];
-            }
-        };
-
+        $fakeSender = $this->configuredFakeSender();
         $this->app->instance(PushSender::class, $fakeSender);
+        Queue::fake();
 
         $this->withHeaders($this->integrationHeaders())
             ->postJson('/api/integracion/notificaciones/evento', [
@@ -348,6 +269,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
                 'notificacion' => null,
                 'push' => [
                     'configured' => true,
+                    'queued' => false,
                     'attemptedDevices' => 0,
                     'sentDevices' => 0,
                     'invalidatedDevices' => 0,
@@ -361,6 +283,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'tipo' => 'tramite_derivado',
         ]);
 
+        Queue::assertNothingPushed();
         $this->assertSame(0, $fakeSender->calls);
     }
 
@@ -410,5 +333,41 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
         return [
             'tramiteId' => 9901,
         ];
+    }
+
+    protected function configuredFakeSender(array $overrideResponse = [])
+    {
+        return new class($overrideResponse) implements PushSender {
+            public int $calls = 0;
+            protected array $overrideResponse;
+
+            public function __construct(array $overrideResponse)
+            {
+                $this->overrideResponse = $overrideResponse;
+            }
+
+            public function provider()
+            {
+                return 'fcm';
+            }
+
+            public function isConfigured()
+            {
+                return true;
+            }
+
+            public function send(UsuarioDispositivo $dispositivo, array $message)
+            {
+                $this->calls++;
+
+                return array_merge([
+                    'success' => true,
+                    'invalidToken' => false,
+                    'providerMessageId' => 'projects/demo/messages/queued',
+                    'errorCode' => null,
+                    'errorMessage' => null,
+                ], $this->overrideResponse);
+            }
+        };
     }
 }

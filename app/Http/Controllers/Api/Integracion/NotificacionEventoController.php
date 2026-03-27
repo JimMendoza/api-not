@@ -7,6 +7,7 @@ use App\Repositories\Identity\RealIdentityRepository;
 use App\Repositories\Notifications\RealNotificationRepository;
 use App\Services\Push\PushNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -40,9 +41,20 @@ class NotificacionEventoController extends Controller
 
         $data = $validator->validated();
 
+        $this->log('info', 'integracion.evento_recibido', [
+            'tramiteId' => (int) $data['tramiteId'],
+            'evento' => $data['evento'],
+            'payloadKeys' => array_keys($data['payload'] ?? []),
+        ]);
+
         $tramite = $realNotifications->findTramiteById((int) $data['tramiteId']);
 
         if (! $tramite || ! $tramite['administradoId'] || ! $tramite['empresaCodigo']) {
+            $this->log('warning', 'integracion.tramite_no_encontrado', [
+                'tramiteId' => (int) $data['tramiteId'],
+                'evento' => $data['evento'],
+            ]);
+
             return response()->json([
                 'mensaje' => 'Trámite no encontrado.',
             ], 404);
@@ -54,12 +66,26 @@ class NotificacionEventoController extends Controller
         );
 
         if (! $usuario) {
+            $this->log('warning', 'integracion.usuario_no_encontrado', [
+                'tramiteId' => (int) $data['tramiteId'],
+                'evento' => $data['evento'],
+                'administradoId' => $tramite['administradoId'],
+                'empresaCodigo' => $tramite['empresaCodigo'],
+            ]);
+
             return response()->json([
                 'mensaje' => 'Trámite no encontrado.',
             ], 404);
         }
 
-        $resultado = $pushNotificationService->createInboxAndSend(
+        $this->log('info', 'integracion.contexto_resuelto', [
+            'tramiteId' => (int) $tramite['id'],
+            'evento' => $data['evento'],
+            'usuarioId' => $usuario->id,
+            'empresaCodigo' => $usuario->empresaCodigo,
+        ]);
+
+        $resultado = $pushNotificationService->createInboxAndDispatch(
             $usuario,
             $tramite,
             $this->notificationAttributes(
@@ -128,6 +154,7 @@ class NotificacionEventoController extends Controller
         }
 
         return [
+            'evento' => $evento,
             'tipo' => $tipo,
             'titulo' => $this->payloadText($payload, 'titulo', $titulo),
             'mensaje' => $this->payloadText($payload, 'mensaje', $mensaje),
@@ -145,5 +172,11 @@ class NotificacionEventoController extends Controller
         $value = trim($value);
 
         return $value !== '' ? $value : $default;
+    }
+
+    protected function log(string $level, string $message, array $context = []): void
+    {
+        Log::channel((string) config('mobile.log_channel', config('logging.default')))
+            ->{$level}($message, $context);
     }
 }
