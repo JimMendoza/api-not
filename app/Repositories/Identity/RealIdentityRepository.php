@@ -2,10 +2,10 @@
 
 namespace App\Repositories\Identity;
 
+use App\Repositories\Support\LegacySqlRepository;
 use App\Services\Auth\AuthenticatedAppUser;
-use Illuminate\Support\Facades\DB;
 
-class RealIdentityRepository
+class RealIdentityRepository extends LegacySqlRepository
 {
     public function findUserForLogin(string $empresaCodigo, string $username): ?AuthenticatedAppUser
     {
@@ -38,7 +38,7 @@ class RealIdentityRepository
     {
         return collect($this->connection()->select(
             'select trim(e."COD_EMP") as codigo, e."DES_EMP" as nombre, e."IMAGEN" as imagen '
-            .'from '.$this->tableName('maestro', 'EMPRESA').' e '
+            .'from '.$this->schemaTable('maestro', 'EMPRESA').' e '
             .'where '.$this->activePredicate('e').' '
             .'order by e."DES_EMP", trim(e."COD_EMP")'
         ))->map(function ($empresa) {
@@ -94,10 +94,10 @@ class RealIdentityRepository
             .'trim(e."COD_EMP") as empresa_codigo, '
             .'e."DES_EMP" as empresa_nombre, '
             .'e."IMAGEN" as empresa_imagen '
-            .'from '.$this->tableName('seguridad', 'USUARIO').' u '
-            .'inner join '.$this->tableName('seguridad', 'USUARIO_EMPRESA').' ue '
+            .'from '.$this->schemaTable('seguridad', 'USUARIO').' u '
+            .'inner join '.$this->schemaTable('seguridad', 'USUARIO_EMPRESA').' ue '
                 .'on trim(ue."COD_USUARIO") = trim(u."COD_USUARIO") '
-            .'inner join '.$this->tableName('maestro', 'EMPRESA').' e '
+            .'inner join '.$this->schemaTable('maestro', 'EMPRESA').' e '
                 .'on trim(e."COD_EMP") = trim(ue."COD_EMP") '
             .'where '.$this->activePredicate('u').' '
                 .'and '.$this->activePredicate('ue').' '
@@ -110,8 +110,8 @@ class RealIdentityRepository
     {
         $systemCodes = collect($this->connection()->select(
             'select trim(us."COD_SISTEMA") as codigo '
-            .'from '.$this->tableName('seguridad', 'USUARIO_SISTEMA').' us '
-            .'inner join '.$this->tableName('seguridad', 'SISTEMA').' s '
+            .'from '.$this->schemaTable('seguridad', 'USUARIO_SISTEMA').' us '
+            .'inner join '.$this->schemaTable('seguridad', 'SISTEMA').' s '
                 .'on trim(s."COD_SISTEMA") = trim(us."COD_SISTEMA") '
             .'where '.$this->activePredicate('us').' '
                 .'and '.$this->activePredicate('s').' '
@@ -157,15 +157,6 @@ class RealIdentityRepository
         return '';
     }
 
-    protected function tableName(string $schema, string $table): string
-    {
-        if ($this->connection()->getDriverName() === 'pgsql') {
-            return $schema.'."'.$table.'"';
-        }
-
-        return '"'.$schema.'_'.$table.'"';
-    }
-
     protected function activePredicate(string $alias): string
     {
         return "trim(coalesce({$alias}.\"IND_ESTADO\", 'A')) = 'A'";
@@ -190,15 +181,5 @@ class RealIdentityRepository
         $normalized = trim((string) $value);
 
         return $normalized === '' ? null : $normalized;
-    }
-
-    protected function connection()
-    {
-        return DB::connection($this->connectionName());
-    }
-
-    protected function connectionName(): string
-    {
-        return (string) config('mobile.connection', config('database.default'));
     }
 }

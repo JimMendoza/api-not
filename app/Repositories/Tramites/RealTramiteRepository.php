@@ -2,12 +2,19 @@
 
 namespace App\Repositories\Tramites;
 
+use App\Repositories\Support\LegacySqlRepository;
+use App\Repositories\Support\LegacyTramiteSql;
 use App\Services\Auth\AuthenticatedAppUser;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
-class RealTramiteRepository
+class RealTramiteRepository extends LegacySqlRepository
 {
+    protected LegacyTramiteSql $legacyTramiteSql;
+
+    public function __construct(LegacyTramiteSql $legacyTramiteSql)
+    {
+        $this->legacyTramiteSql = $legacyTramiteSql;
+    }
+
     public function listVisibleForUser(AuthenticatedAppUser $usuario): array
     {
         return collect($this->connection()->select(
@@ -69,15 +76,7 @@ class RealTramiteRepository
     {
         return 'select '
             .'r."ID" as id, '
-            .'r."NUMERO_DOCUMENTO" as numero_documento, '
-            .'r."NUMERO_EMISION" as numero_emision, '
-            .'r."NRO_EXPEDIENTE" as nro_expediente, '
-            .'r."ASUNTO" as asunto, '
-            .'r."OBSERVACION" as observacion, '
-            .'coalesce(r."FECHA_EMISION", r."FECHA", r."CREATED_AT") as fecha_referencia, '
-            .'e."DESCRIPCION_USER" as estado_descripcion_user, '
-            .'e."DESCRIPCION" as estado_descripcion, '
-            .'e."DESCRIPCION_MP" as estado_descripcion_mp, '
+            .$this->legacyTramiteSql->summarySelect('r', 'e').', '
             .'case when exists ('
                 .'select 1 from '.$this->mobileTableName('tramite_seguimientos').' ts '
                 .'where ts.usuario_id = ? '
@@ -90,12 +89,8 @@ class RealTramiteRepository
                     .'and n.tramite_id = r."ID" '
                     .'and n.leida = false'
             .'), 0) as notificaciones_no_leidas '
-            .'from '.$this->tramiteTableName('REMITO').' r '
-            .'left join '.$this->tramiteTableName('ESTADO').' e '
-                .'on e."ID" = r."ESTADO_ID" '
-            .'where r."DELETED_AT" is null '
-                .'and trim(r."ADMINISTRADO_ID") = ? '
-                .'and trim(r."COD_EMP") = ?';
+            .$this->legacyTramiteSql->fromWithEstado('r', 'e').' '
+            .'where '.$this->legacyTramiteSql->visiblePredicate('r');
     }
 
     protected function orderBySql(): string
@@ -105,111 +100,22 @@ class RealTramiteRepository
 
     protected function bindingsForUser(AuthenticatedAppUser $usuario): array
     {
-        return [
+        return array_merge([
             $usuario->id,
             $usuario->id,
-            trim((string) $usuario->codUsuario),
-            trim((string) $usuario->empresaCodigo),
-        ];
+        ], $this->legacyTramiteSql->visibilityBindings(
+            (string) $usuario->codUsuario,
+            (string) $usuario->empresaCodigo
+        ));
     }
 
     protected function mapRow($row): array
     {
-        $codigo = $this->firstFilled([
-            $row->numero_documento ?? null,
-            $row->numero_emision ?? null,
-            $row->nro_expediente ?? null,
-            (string) $row->id,
-        ]);
-
-        return [
+        return array_merge([
             'id' => (int) $row->id,
-            'codigo' => $codigo,
-            'titulo' => $this->firstFilled([
-                $row->asunto ?? null,
-                $codigo,
-            ]),
-            'descripcion' => $this->firstFilled([
-                $row->observacion ?? null,
-                $row->asunto ?? null,
-                $codigo,
-            ]),
-            'fecha' => $this->formatDate($row->fecha_referencia ?? null),
-            'estadoActual' => $this->firstFilled([
-                $row->estado_descripcion_user ?? null,
-                $row->estado_descripcion ?? null,
-                $row->estado_descripcion_mp ?? null,
-                'Sin estado',
-            ]),
+        ], $this->legacyTramiteSql->summaryPayloadFromRow($row), [
             'siguiendo' => (int) ($row->siguiendo ?? 0) > 0,
             'notificacionesNoLeidas' => (int) ($row->notificaciones_no_leidas ?? 0),
-        ];
-    }
-
-    protected function formatDate($value): ?string
-    {
-        if (! $value) {
-            return null;
-        }
-
-        return Carbon::parse($value)->format('Y-m-d');
-    }
-
-    protected function firstFilled(array $values): ?string
-    {
-        foreach ($values as $value) {
-            $normalized = $this->normalizeText($value);
-
-            if ($normalized !== null && $normalized !== '') {
-                return $normalized;
-            }
-        }
-
-        return null;
-    }
-
-    protected function normalizeText($value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $normalized = preg_replace('/\s+/u', ' ', trim((string) $value));
-
-        return $normalized === '' ? null : $normalized;
-    }
-
-    protected function mobileTable(string $table)
-    {
-        return DB::connection($this->connectionName())
-            ->table($this->mobileTableName($table));
-    }
-
-    protected function mobileTableName(string $table): string
-    {
-        if ($this->connection()->getDriverName() === 'pgsql') {
-            return 'app_mobile.'.$table;
-        }
-
-        return 'app_mobile_'.$table;
-    }
-
-    protected function tramiteTableName(string $table): string
-    {
-        if ($this->connection()->getDriverName() === 'pgsql') {
-            return 'virtual."'.$table.'"';
-        }
-
-        return '"virtual_'.$table.'"';
-    }
-
-    protected function connection()
-    {
-        return DB::connection($this->connectionName());
-    }
-
-    protected function connectionName(): string
-    {
-        return (string) config('mobile.connection', config('database.default'));
+        ]);
     }
 }
