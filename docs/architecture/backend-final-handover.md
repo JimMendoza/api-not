@@ -8,7 +8,7 @@
 - **Ruta del repo**: `C:\laragon\www\app-not\api-not`
 - **Archivo canónico**: `docs/architecture/backend-final-handover.md`
 - **Propósito del backend**: exponer la API móvil de NOT sobre Laravel, autenticando usuarios reales de la base `tramite`, resolviendo trámites/notificaciones sobre tablas reales y persistiendo estado móvil propio en `app_mobile`.
-- **Fecha de última actualización**: `2026-03-27`
+- **Fecha de última actualización**: `2026-03-31`
 - **Estado general**: `operativo, estable y limpio fuera de hoja-ruta`
 - **Pendiente funcional aceptado**: `GET /api/app/tramites/{id}/hoja-ruta` responde `501` hasta contar con una fuente real de movimientos.
 
@@ -87,10 +87,10 @@ El backend sigue un patrón Laravel limpio y explícito:
 - Kernel: `app/Http/Kernel.php`
 - Rutas API: `routes/api.php`
 - Middleware custom: `AuthenticateAppToken`, `AuthenticateIntegrationToken`
-- Controllers API: `app/Http/Controllers/Api/App/*` y `app/Http/Controllers/Api/Integracion/*`
-- Repositories: `app/Repositories/*`
-- Services: `app/Services/*`
-- Models Eloquent: `app/Models/AppMobile/*`
+- Controllers API: `app/Modules/*/Controllers/Api/*` + `app/Support/Http/Controllers/ApiController.php`
+- Repositories: `app/Modules/*/Repositories/*` + `app/Support/Repositories/*`
+- Services: `app/Modules/*/Services/*`
+- Models Eloquent: `app/Modules/*/Models/*` + base `app/Support/Models/AppMobileModel.php`
 - Response: JSON directo con `mensaje`, payloads o arrays según endpoint
 
 ### Auth móvil
@@ -244,32 +244,32 @@ flowchart LR
 | Ruta | Función exacta | Módulo / uso | Tipo |
 | --- | --- | --- | --- |
 | `app/Http/Controllers/Controller.php` | Base controller Laravel | Framework | Soporte/framework |
-| `app/Http/Controllers/Api/App/ApiController.php` | Helpers comunes `ok`, `error` y lectura de módulos/permisos | Base para controllers app | Runtime activo |
+| `app/Support/Http/Controllers/ApiController.php` | Helpers comunes `ok`, `error` y lectura de módulos/permisos | Base para controllers app | Runtime activo |
 
 ##### Controllers app móvil
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Http/Controllers/Api/App/AutenticacionController.php` | `login`, `me`, `logout`; emite tokens y revoca sesión/dispositivo | Auth móvil | Runtime activo |
-| `app/Http/Controllers/Api/App/EntidadController.php` | Expone `POST /api/app/entidades` | Entidades | Runtime activo |
-| `app/Http/Controllers/Api/App/ModuloController.php` | Devuelve módulos visibles desde config | Módulos | Runtime activo |
-| `app/Http/Controllers/Api/App/TramiteController.php` | Lista, detalle, seguir, dejar seguir y `hoja-ruta 501` | Trámites | Runtime activo |
-| `app/Http/Controllers/Api/App/NotificacionController.php` | Inbox, resumen y marcar leída | Notificaciones | Runtime activo |
-| `app/Http/Controllers/Api/App/NotificacionConfiguracionController.php` | Show/update de configuración v2 | Configuración de notificaciones | Runtime activo |
-| `app/Http/Controllers/Api/App/DispositivoPushController.php` | Registra e invalida dispositivos FCM | Push dispositivos | Runtime activo |
+| `app/Modules/Auth/Controllers/Api/AutenticacionController.php` | `login`, `me`, `logout`; emite tokens y revoca sesión/dispositivo | Auth móvil | Runtime activo |
+| `app/Modules/Auth/Controllers/Api/EntidadController.php` | Expone `POST /api/app/entidades` | Entidades | Runtime activo |
+| `app/Modules/Auth/Controllers/Api/ModuloController.php` | Devuelve módulos visibles desde config | Módulos | Runtime activo |
+| `app/Modules/Tramites/Controllers/Api/TramiteController.php` | Lista, detalle, seguir, dejar seguir y `hoja-ruta 501` | Trámites | Runtime activo |
+| `app/Modules/Notificaciones/Controllers/Api/NotificacionController.php` | Inbox, resumen y marcar leída | Notificaciones | Runtime activo |
+| `app/Modules/Notificaciones/Controllers/Api/NotificacionConfiguracionController.php` | Show/update de configuración v2 | Configuración de notificaciones | Runtime activo |
+| `app/Modules/Notificaciones/Controllers/Api/DispositivoPushController.php` | Registra e invalida dispositivos FCM | Push dispositivos | Runtime activo |
 
 ##### Controller de integración
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Http/Controllers/Api/Integracion/NotificacionEventoController.php` | Endpoint invokable de integración, valida payload, resuelve trámite/usuario y dispara inbox + push | Integración de eventos | Runtime activo |
+| `app/Modules/Integracion/Controllers/Api/NotificacionEventoController.php` | Endpoint invokable de integración, valida payload, resuelve trámite/usuario y dispara inbox + push | Integración de eventos | Runtime activo |
 
 #### `app/Http/Middleware`
 
 | Ruta | Función exacta | Módulo / uso | Tipo |
 | --- | --- | --- | --- |
-| `app/Http/Middleware/AuthenticateAppToken.php` | Resuelve bearer token móvil y setea `Request::user()` | Auth móvil | Runtime activo |
-| `app/Http/Middleware/AuthenticateIntegrationToken.php` | Valida token estático para integración | Integración | Runtime activo |
+| `app/Modules/Auth/Middleware/AuthenticateAppToken.php` | Resuelve bearer token móvil y setea `Request::user()` | Auth móvil | Runtime activo |
+| `app/Modules/Integracion/Middleware/AuthenticateIntegrationToken.php` | Valida token estático para integración | Integración | Runtime activo |
 | `app/Http/Middleware/Authenticate.php` | Middleware auth estándar Laravel | Framework | Soporte/framework |
 | `app/Http/Middleware/CheckForMaintenanceMode.php` | Modo mantenimiento | Framework | Soporte/framework |
 | `app/Http/Middleware/EncryptCookies.php` | Cookies del grupo `web` | Framework | Soporte/framework |
@@ -282,28 +282,28 @@ flowchart LR
 
 | Ruta | Función exacta | Módulo / uso | Tipo |
 | --- | --- | --- | --- |
-| `app/Http/Requests/Api/App/ApiRequest.php` | Base request con respuesta `422` y `403` homogénea | Base API app | Runtime activo |
-| `app/Http/Requests/Api/App/LoginRequest.php` | Valida `username`, `password`, `codEmp` | Auth móvil | Runtime activo |
-| `app/Http/Requests/Api/App/UpdateNotificacionConfiguracionRequest.php` | Valida contrato v2 y fija `America/Lima` | Configuración notificaciones | Runtime activo |
-| `app/Http/Requests/Api/App/UpsertDispositivoPushRequest.php` | Valida alta/actualización de push token | Push dispositivos | Runtime activo |
-| `app/Http/Requests/Api/App/InvalidateDispositivoPushRequest.php` | Valida invalidación por `deviceId` | Push dispositivos | Runtime activo |
+| `app/Support/Http/Requests/ApiRequest.php` | Base request con respuesta `422` y `403` homogénea | Base API app | Runtime activo |
+| `app/Modules/Auth/Requests/LoginRequest.php` | Valida `username`, `password`, `codEmp` | Auth móvil | Runtime activo |
+| `app/Modules/Notificaciones/Requests/UpdateNotificacionConfiguracionRequest.php` | Valida contrato v2 y fija `America/Lima` | Configuración notificaciones | Runtime activo |
+| `app/Modules/Notificaciones/Requests/UpsertDispositivoPushRequest.php` | Valida alta/actualización de push token | Push dispositivos | Runtime activo |
+| `app/Modules/Notificaciones/Requests/InvalidateDispositivoPushRequest.php` | Valida invalidación por `deviceId` | Push dispositivos | Runtime activo |
 
 #### `app/Jobs`
 
 | Ruta | Función exacta | Módulo / uso | Tipo |
 | --- | --- | --- | --- |
-| `app/Jobs/SendPushNotificationJob.php` | Job `ShouldQueue` que rehidrata el usuario y ejecuta el envío real FCM | Push / cola | Runtime activo |
+| `app/Modules/Notificaciones/Jobs/SendPushNotificationJob.php` | Job `ShouldQueue` que rehidrata el usuario y ejecuta el envío real FCM | Push / cola | Runtime activo |
 
 #### `app/Models/AppMobile`
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Models/AppMobile/AppMobileModel.php` | Base model para tablas `app_mobile.*` en pgsql y `app_mobile_*` en SQLite | Persistencia móvil | Runtime activo |
-| `app/Models/AppMobile/UsuarioToken.php` | Sesiones móviles, scope `valid()` y expiración | Auth móvil | Runtime activo |
-| `app/Models/AppMobile/TramiteSeguimiento.php` | Persistencia de seguimiento activo/inactivo | Seguimiento | Runtime activo |
-| `app/Models/AppMobile/UsuarioNotificacionConfiguracion.php` | Defaults y constante de zona fija | Configuración notificaciones | Runtime activo |
-| `app/Models/AppMobile/UsuarioDispositivo.php` | Dispositivos FCM y scope `active()` | Push dispositivos | Runtime activo |
-| `app/Models/AppMobile/Notificacion.php` | Inbox persistido del usuario | Notificaciones | Runtime activo |
+| `app/Support/Models/AppMobileModel.php` | Base model para tablas `app_mobile.*` en pgsql y `app_mobile_*` en SQLite | Persistencia móvil | Runtime activo |
+| `app/Modules/Auth/Models/UsuarioToken.php` | Sesiones móviles, scope `valid()` y expiración | Auth móvil | Runtime activo |
+| `app/Modules/Tramites/Models/TramiteSeguimiento.php` | Persistencia de seguimiento activo/inactivo | Seguimiento | Runtime activo |
+| `app/Modules/Notificaciones/Models/UsuarioNotificacionConfiguracion.php` | Defaults y constante de zona fija | Configuración notificaciones | Runtime activo |
+| `app/Modules/Notificaciones/Models/UsuarioDispositivo.php` | Dispositivos FCM y scope `active()` | Push dispositivos | Runtime activo |
+| `app/Modules/Notificaciones/Models/Notificacion.php` | Inbox persistido del usuario | Notificaciones | Runtime activo |
 
 #### `app/Providers`
 
@@ -320,21 +320,21 @@ flowchart LR
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Repositories/Identity/RealIdentityRepository.php` | Login real, usuario por token context, empresas activas, permisos y nombre visible | Auth / identidad / entidades | Runtime activo |
+| `app/Modules/Auth/Repositories/RealIdentityRepository.php` | Login real, usuario por token context, empresas activas, permisos y nombre visible | Auth / identidad / entidades | Runtime activo |
 
 ##### Trámites
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Repositories/Tramites/RealTramiteRepository.php` | Lista y detalle de trámites visibles, seguimiento y conteo de no leídas por trámite | Trámites | Runtime activo |
+| `app/Modules/Tramites/Repositories/RealTramiteRepository.php` | Lista y detalle de trámites visibles, seguimiento y conteo de no leídas por trámite | Trámites | Runtime activo |
 
 ##### Notificaciones
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Repositories/Notifications/RealNotificationRepository.php` | Inbox histórico visible, resumen, `markRead`, creación de inbox, lookup de trámite y chequeo de seguimiento | Notificaciones / integración | Runtime activo |
-| `app/Repositories/Notifications/RealNotificationSettingsRepository.php` | Lee y escribe configuración v2 | Configuración notificaciones | Runtime activo |
-| `app/Repositories/Notifications/RealPushDeviceRepository.php` | Upsert, invalidate y touch de dispositivos push | Push dispositivos | Runtime activo |
+| `app/Modules/Notificaciones/Repositories/RealNotificationRepository.php` | Inbox histórico visible, resumen, `markRead`, creación de inbox, lookup de trámite y chequeo de seguimiento | Notificaciones / integración | Runtime activo |
+| `app/Modules/Notificaciones/Repositories/RealNotificationSettingsRepository.php` | Lee y escribe configuración v2 | Configuración notificaciones | Runtime activo |
+| `app/Modules/Notificaciones/Repositories/RealPushDeviceRepository.php` | Upsert, invalidate y touch de dispositivos push | Push dispositivos | Runtime activo |
 
 #### `app/Services`
 
@@ -342,16 +342,16 @@ flowchart LR
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Services/Auth/AccessTokenManager.php` | Emite, resuelve, renueva y revoca tokens móviles | Auth móvil | Runtime activo |
-| `app/Services/Auth/AuthenticatedAppUser.php` | DTO/autenticatable de usuario móvil con aliases camel/snake | Auth / identidad | Runtime activo |
+| `app/Modules/Auth/Services/AccessTokenManager.php` | Emite, resuelve, renueva y revoca tokens móviles | Auth móvil | Runtime activo |
+| `app/Modules/Auth/Support/AuthenticatedAppUser.php` | DTO/autenticatable de usuario móvil con aliases camel/snake | Auth / identidad | Runtime activo |
 
 ##### Push
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Services/Push/PushSender.php` | Contrato del provider de push | Push | Runtime activo |
-| `app/Services/Push/FcmPushSender.php` | Implementación FCM HTTP v1, OAuth JWT, cache token y parseo de invalid token | Push / FCM | Runtime activo |
-| `app/Services/Push/PushNotificationService.php` | Orquestación inbox-first, `not_followed`, quiet hours y dispatch a cola | Push / integración | Runtime activo |
+| `app/Modules/Notificaciones/Services/PushSender.php` | Contrato del provider de push | Push | Runtime activo |
+| `app/Modules/Notificaciones/Services/FcmPushSender.php` | Implementación FCM HTTP v1, OAuth JWT, cache token y parseo de invalid token | Push / FCM | Runtime activo |
+| `app/Modules/Notificaciones/Services/PushNotificationService.php` | Orquestación inbox-first, `not_followed`, quiet hours y dispatch a cola | Push / integración | Runtime activo |
 
 ### `config/`
 
@@ -861,14 +861,14 @@ No existen foreign keys entre `seguridad`, `maestro`, `virtual` y `app_mobile`. 
 
 | Archivo | Rol exacto |
 | --- | --- |
-| `app/Http/Controllers/Api/Integracion/NotificacionEventoController.php` | Recibe el evento de integración, valida input, resuelve trámite/usuario y dispara el flujo |
-| `app/Services/Push/PushNotificationService.php` | Aplica reglas de negocio: `not_followed`, inbox-first, quiet hours y dispatch a cola |
-| `app/Jobs/SendPushNotificationJob.php` | Ejecuta el envío real en background |
-| `app/Services/Push/FcmPushSender.php` | Implementa el provider FCM HTTP v1 |
-| `app/Services/Push/PushSender.php` | Contrato abstracto del provider |
-| `app/Repositories/Notifications/RealNotificationRepository.php` | Crea inbox, arma payload y resuelve contador no leído |
-| `app/Repositories/Notifications/RealNotificationSettingsRepository.php` | Obtiene configuración de quiet hours |
-| `app/Repositories/Notifications/RealPushDeviceRepository.php` | Obtiene dispositivos activos, invalida tokens y actualiza `ultimo_push_at` |
+| `app/Modules/Integracion/Controllers/Api/NotificacionEventoController.php` | Recibe el evento de integración, valida input, resuelve trámite/usuario y dispara el flujo |
+| `app/Modules/Notificaciones/Services/PushNotificationService.php` | Aplica reglas de negocio: `not_followed`, inbox-first, quiet hours y dispatch a cola |
+| `app/Modules/Notificaciones/Jobs/SendPushNotificationJob.php` | Ejecuta el envío real en background |
+| `app/Modules/Notificaciones/Services/FcmPushSender.php` | Implementa el provider FCM HTTP v1 |
+| `app/Modules/Notificaciones/Services/PushSender.php` | Contrato abstracto del provider |
+| `app/Modules/Notificaciones/Repositories/RealNotificationRepository.php` | Crea inbox, arma payload y resuelve contador no leído |
+| `app/Modules/Notificaciones/Repositories/RealNotificationSettingsRepository.php` | Obtiene configuración de quiet hours |
+| `app/Modules/Notificaciones/Repositories/RealPushDeviceRepository.php` | Obtiene dispositivos activos, invalida tokens y actualiza `ultimo_push_at` |
 | `config/services.php` | Credenciales FCM e integración |
 | `config/mobile.php` | Cola `push` y canal de log móvil |
 | `config/queue.php` | Driver `database`, tablas `jobs` y `failed_jobs` |
@@ -1275,3 +1275,4 @@ Fuera de `hoja-ruta`, **no queda otra deuda seria de backend** documentada al mo
 ## Historial de actualizaciones del documento
 
 - `2026-03-27`: creación inicial del documento canónico `docs/architecture/backend-final-handover.md` con arquitectura, inventario, datos, contratos, operación, testing y riesgos del backend final `api-not`.
+- `2026-03-31`: consolidación estructural final en `app/Modules/*` y `app/Support/*`, incluyendo limpieza de paths viejos y verificación de consistencia de referencias.

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\App;
 
-use App\Models\AppMobile\UsuarioNotificacionConfiguracion;
+use App\Modules\Notificaciones\Models\UsuarioNotificacionConfiguracion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\App\Concerns\SeedsRealIdentityContext;

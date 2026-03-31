@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Integracion;
 
-use App\Jobs\SendPushNotificationJob;
-use App\Models\AppMobile\UsuarioDispositivo;
-use App\Models\AppMobile\UsuarioNotificacionConfiguracion;
-use App\Services\Push\PushSender;
+use App\Modules\Notificaciones\Jobs\SendPushNotificationJob;
+use App\Modules\Notificaciones\Models\UsuarioDispositivo;
+use App\Modules\Notificaciones\Models\UsuarioNotificacionConfiguracion;
+use App\Modules\Notificaciones\Services\PushSender;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;

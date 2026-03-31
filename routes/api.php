@@ -1,14 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\App\AutenticacionController;
-use App\Http\Controllers\Api\App\DispositivoPushController;
-use App\Http\Controllers\Api\App\EntidadController;
-use App\Http\Controllers\Api\App\ModuloController;
-use App\Http\Controllers\Api\App\NotificacionConfiguracionController;
-use App\Http\Controllers\Api\App\NotificacionController;
-use App\Http\Controllers\Api\App\TramiteController;
-use App\Http\Controllers\Api\Integracion\NotificacionEventoController;
+use App\Modules\Auth\Controllers\Api\AutenticacionController;
+use App\Modules\Notificaciones\Controllers\Api\DispositivoPushController;
+use App\Modules\Auth\Controllers\Api\EntidadController;
+use App\Modules\Auth\Controllers\Api\ModuloController;
+use App\Modules\Notificaciones\Controllers\Api\NotificacionConfiguracionController;
+use App\Modules\Notificaciones\Controllers\Api\NotificacionController;
+use App\Modules\Tramites\Controllers\Api\TramiteController;
+use App\Modules\Integracion\Controllers\Api\NotificacionEventoController;
 
 /*
 |--------------------------------------------------------------------------

@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use App\Services\Push\FcmPushSender;
-use App\Services\Push\PushSender;
+use App\Modules\Notificaciones\Services\FcmPushSender;
+use App\Modules\Notificaciones\Services\PushSender;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
