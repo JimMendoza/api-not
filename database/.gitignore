@@ -1,2 +1,2 @@
-*.sqlite
-*.sqlite-journal
+# PostgreSQL-only: no local DB artifact patterns required.
+

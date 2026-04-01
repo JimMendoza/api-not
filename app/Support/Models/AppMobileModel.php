@@ -15,13 +15,7 @@ abstract class AppMobileModel extends Model
 
     public function getTable()
     {
-        $baseTable = $this->baseTable();
-
-        if ($this->getConnection()->getDriverName() === 'pgsql') {
-            return 'app_mobile.'.$baseTable;
-        }
-
-        return 'app_mobile_'.$baseTable;
+        return 'app_mobile.'.$this->baseTable();
     }
 
     public static function tableName(): string

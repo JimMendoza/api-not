@@ -8,7 +8,7 @@
 - **Ruta del repo**: `C:\laragon\www\app-not\api-not`
 - **Archivo canónico**: `docs/architecture/backend-final-handover.md`
 - **Propósito del backend**: exponer la API móvil de NOT sobre Laravel, autenticando usuarios reales de la base `tramite`, resolviendo trámites/notificaciones sobre tablas reales y persistiendo estado móvil propio en `app_mobile`.
-- **Fecha de última actualización**: `2026-03-31`
+- **Fecha de última actualización**: `2026-04-01`
 - **Estado general**: `operativo, estable y limpio fuera de hoja-ruta`
 - **Pendiente funcional aceptado**: `GET /api/app/tramites/{id}/hoja-ruta` responde `501` hasta contar con una fuente real de movimientos.
 
@@ -216,7 +216,7 @@ flowchart LR
 | `README.md` | Guía operativa corta del backend, variables mínimas, worker y smoke | Operación local | Documentación |
 | `composer.json` | Declara dependencias, autoload y scripts Composer | Bootstrap del proyecto | Runtime activo / soporte |
 | `composer.lock` | Fija versiones exactas de dependencias | Reproducibilidad | Soporte |
-| `phpunit.xml` | Configura suite `Feature`, SQLite in-memory y queue `sync` para tests | Testing | Test |
+| `phpunit.xml` | Configura suite `Feature`, PostgreSQL de testing y queue `sync` para tests | Testing | Test |
 | `.env.example` | Plantilla canónica del runtime real | Operación / onboarding | Documentación |
 | `.env.testing` | Entorno específico de pruebas | Testing | Test |
 | `artisan` | Entry point CLI Laravel | Framework | Soporte/framework |
@@ -298,7 +298,7 @@ flowchart LR
 
 | Ruta | Función exacta | Módulo soportado | Tipo |
 | --- | --- | --- | --- |
-| `app/Support/Models/AppMobileModel.php` | Base model para tablas `app_mobile.*` en pgsql y `app_mobile_*` en SQLite | Persistencia móvil | Runtime activo |
+| `app/Support/Models/AppMobileModel.php` | Base model para tablas `app_mobile.*` en PostgreSQL | Persistencia móvil | Runtime activo |
 | `app/Modules/Auth/Models/UsuarioToken.php` | Sesiones móviles, scope `valid()` y expiración | Auth móvil | Runtime activo |
 | `app/Modules/Tramites/Models/TramiteSeguimiento.php` | Persistencia de seguimiento activo/inactivo | Seguimiento | Runtime activo |
 | `app/Modules/Notificaciones/Models/UsuarioNotificacionConfiguracion.php` | Defaults y constante de zona fija | Configuración notificaciones | Runtime activo |
@@ -402,8 +402,8 @@ flowchart LR
 | `tests/Feature/App/RealNotificacionesFeatureTest.php` | Prueba inbox histórico, resumen, marcar leída y configuración v2 | Notificaciones | Test |
 | `tests/Feature/App/RealPushDispositivosFeatureTest.php` | Prueba upsert/invalidate de push token y logout con deviceId | Push dispositivos | Test |
 | `tests/Feature/Integracion/RealNotificacionesEventoIntegracionFeatureTest.php` | Prueba integración, quiet hours, `not_followed`, queue dispatch e inbox-first | Integración / Push | Test |
-| `tests/Support/Database/Migrations/2026_03_24_100000_create_testing_tramite_identity_tables.php` | Tablas SQLite de `seguridad` y `maestro` | Testing | Test support |
-| `tests/Support/Database/Migrations/2026_03_24_110000_create_testing_tramite_virtual_tables.php` | Tablas SQLite de `virtual` | Testing | Test support |
+| `tests/Support/Database/Migrations/2026_03_24_100000_create_testing_tramite_identity_tables.php` | Tablas PostgreSQL de `seguridad` y `maestro` (schemas reales) | Testing | Test support |
+| `tests/Support/Database/Migrations/2026_03_24_110000_create_testing_tramite_virtual_tables.php` | Tablas PostgreSQL de `virtual` (schema real) | Testing | Test support |
 
 ### `docs/contracts/`
 
@@ -1145,7 +1145,7 @@ INTEGRACION_API_TOKEN=
 | `tests/Feature/App/RealNotificacionesFeatureTest.php` | Inbox histórico, resumen, `markRead`, configuración v2 |
 | `tests/Feature/App/RealPushDispositivosFeatureTest.php` | Alta/actualización/invalidez de dispositivos y logout con deviceId |
 | `tests/Feature/Integracion/RealNotificacionesEventoIntegracionFeatureTest.php` | Integración, evento inválido, trámite inválido, quiet hours, `not_followed`, queue dispatch, inbox-first |
-| `tests/Feature/App/Concerns/SeedsRealIdentityContext.php` | Helpers de seed para simular el contexto real en SQLite |
+| `tests/Feature/App/Concerns/SeedsRealIdentityContext.php` | Helpers de seed para simular el contexto real en PostgreSQL |
 | `tests/Support/Database/Migrations/*` | Tablas testing para `seguridad`, `maestro` y `virtual` |
 
 ### Qué cubren bien
@@ -1164,14 +1164,14 @@ INTEGRACION_API_TOKEN=
 
 ### Qué no cubren completamente
 
-- PostgreSQL real con quoted identifiers y comportamiento exacto de schemas en mayúsculas
+- Escenarios de performance y cardinalidad alta contra datos productivos reales
 - Red y provider FCM real
 - Worker `database queue` separado del proceso de test
 - Limpieza operativa de `jobs`, `failed_jobs` y tokens expirados
 
-### Limitaciones de SQLite / sync frente al runtime real
+### Limitaciones de testing PostgreSQL / sync frente al runtime real
 
-- `phpunit.xml` fuerza `DB_CONNECTION=sqlite` y `DB_DATABASE=:memory:`.
+- `phpunit.xml` fuerza `DB_CONNECTION=pgsql` y `.env.testing` define una BD de pruebas dedicada.
 - `CACHE_DRIVER=array` evita usar `public.cache` durante tests.
 - `QUEUE_CONNECTION=sync` ejecuta el job dentro del mismo proceso de prueba.
 - Esto acelera la suite y protege contratos, pero no reproduce exactamente el runtime real `pgsql + public.cache + public.jobs + worker`.
@@ -1188,7 +1188,7 @@ vendor/bin/phpunit tests/Feature
 ### Estado observado al crear este documento
 
 - `php artisan route:list --path=api`: `18 rutas activas`
-- `vendor/bin/phpunit tests/Feature`: `OK (20 tests, 103 assertions)`
+- `vendor/bin/phpunit tests/Feature`: requiere una BD PostgreSQL de testing existente (por defecto `tramite_testing`); si no existe, falla en `migrate:fresh` con `SQLSTATE[08006]`.
 
 ## Operación y troubleshooting
 
@@ -1276,3 +1276,8 @@ Fuera de `hoja-ruta`, **no queda otra deuda seria de backend** documentada al mo
 
 - `2026-03-27`: creación inicial del documento canónico `docs/architecture/backend-final-handover.md` con arquitectura, inventario, datos, contratos, operación, testing y riesgos del backend final `api-not`.
 - `2026-03-31`: consolidación estructural final en `app/Modules/*` y `app/Support/*`, incluyendo limpieza de paths viejos y verificación de consistencia de referencias.
+- `2026-04-01`: migración a PostgreSQL-only en runtime/testing, eliminación de compatibilidad multibase previa en helpers/migraciones y actualización de documentación canónica de operación/testing.
+
+
+
+

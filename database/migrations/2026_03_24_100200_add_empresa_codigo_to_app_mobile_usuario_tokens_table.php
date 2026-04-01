@@ -45,19 +45,11 @@ class AddEmpresaCodigoToAppMobileUsuarioTokensTable extends Migration
 
     protected function tableName()
     {
-        if (Schema::getConnection()->getDriverName() === 'pgsql') {
-            return 'app_mobile.usuario_tokens';
-        }
-
-        return 'app_mobile_usuario_tokens';
+        return 'app_mobile.usuario_tokens';
     }
 
     protected function columnExists($qualifiedTable, $column)
     {
-        if (Schema::getConnection()->getDriverName() !== 'pgsql') {
-            return Schema::hasColumn($qualifiedTable, $column);
-        }
-
         [$schema, $table] = explode('.', $qualifiedTable, 2);
 
         $row = Schema::getConnection()->selectOne(
@@ -70,10 +62,6 @@ class AddEmpresaCodigoToAppMobileUsuarioTokensTable extends Migration
 
     protected function indexExists($qualifiedTable, $indexName)
     {
-        if (Schema::getConnection()->getDriverName() !== 'pgsql') {
-            return false;
-        }
-
         [$schema, $table] = explode('.', $qualifiedTable, 2);
 
         $row = Schema::getConnection()->selectOne(

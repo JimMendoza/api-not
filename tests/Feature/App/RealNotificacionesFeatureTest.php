@@ -65,7 +65,7 @@ class RealNotificacionesFeatureTest extends TestCase
             'ESTADO_ID' => 1,
         ]);
 
-        DB::table('app_mobile_tramite_seguimientos')->insert([
+        DB::table('app_mobile.tramite_seguimientos')->insert([
             [
                 'usuario_id' => 101,
                 'tramite_id' => 801,
@@ -89,7 +89,7 @@ class RealNotificacionesFeatureTest extends TestCase
             ],
         ]);
 
-        DB::table('app_mobile_notificaciones')->insert([
+        DB::table('app_mobile.notificaciones')->insert([
             [
                 'id' => 9001,
                 'usuario_id' => 101,
@@ -216,7 +216,7 @@ class RealNotificacionesFeatureTest extends TestCase
                 'mensaje' => 'Notificación marcada como leída.',
             ]);
 
-        $this->assertDatabaseHas('app_mobile_notificaciones', [
+        $this->assertDatabaseHas('app_mobile.notificaciones', [
             'id' => 9002,
             'leida' => 1,
         ]);
@@ -266,7 +266,7 @@ class RealNotificacionesFeatureTest extends TestCase
                 'mostrar_contador_no_leidas' => false,
             ]);
 
-        $this->assertDatabaseHas('app_mobile_usuario_notificacion_configuraciones', [
+        $this->assertDatabaseHas('app_mobile.usuario_notificacion_configuraciones', [
             'usuario_id' => 101,
             'silenciar_fuera_de_horario' => 1,
             'hora_silencio_inicio' => '21:00',
@@ -278,7 +278,7 @@ class RealNotificacionesFeatureTest extends TestCase
 
     protected function seedEstado($id, $descripcionUser)
     {
-        DB::table('virtual_ESTADO')->insert([
+        DB::table('virtual.ESTADO')->insert([
             'ID' => $id,
             'DESCRIPCION' => $descripcionUser,
             'DESCRIPCION_MP' => $descripcionUser,
@@ -288,10 +288,11 @@ class RealNotificacionesFeatureTest extends TestCase
 
     protected function seedRemito(array $data)
     {
-        DB::table('virtual_REMITO')->insert(array_merge([
+        DB::table('virtual.REMITO')->insert(array_merge([
             'CREATED_AT' => '2026-03-24 08:00:00',
             'UPDATED_AT' => '2026-03-24 08:00:00',
             'DELETED_AT' => null,
         ], $data));
     }
 }
+

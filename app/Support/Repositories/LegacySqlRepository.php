@@ -16,18 +16,9 @@ abstract class LegacySqlRepository
         return (string) config('mobile.connection', config('database.default'));
     }
 
-    protected function isPgsql(): bool
-    {
-        return $this->connection()->getDriverName() === 'pgsql';
-    }
-
     protected function schemaTable(string $schema, string $table): string
     {
-        if ($this->isPgsql()) {
-            return $schema.'."'.$table.'"';
-        }
-
-        return '"'.$schema.'_'.$table.'"';
+        return $schema.'."'.$table.'"';
     }
 
     protected function mobileTable(string $table)
@@ -37,11 +28,7 @@ abstract class LegacySqlRepository
 
     protected function mobileTableName(string $table): string
     {
-        if ($this->isPgsql()) {
-            return 'app_mobile.'.$table;
-        }
-
-        return 'app_mobile_'.$table;
+        return 'app_mobile.'.$table;
     }
 
     protected function virtualTableName(string $table): string

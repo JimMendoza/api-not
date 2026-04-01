@@ -43,14 +43,14 @@ trait SeedsRealIdentityContext
             'apellidoMaterno' => 'Demo',
         ];
 
-        DB::table('maestro_EMPRESA')->insert([
+        DB::table('maestro.EMPRESA')->insert([
             'COD_EMP' => $empresaCodigo,
             'DES_EMP' => $empresaNombre,
             'IMAGEN' => $empresaImagen,
             'IND_ESTADO' => 'A',
         ]);
 
-        DB::table('seguridad_USUARIO')->insert([
+        DB::table('seguridad.USUARIO')->insert([
             'ID' => $usuarioId,
             'COD_USUARIO' => $username,
             'NOM_USUARIO' => $overrides['nomUsuario'] ?? 'Usuario Movil',
@@ -61,13 +61,13 @@ trait SeedsRealIdentityContext
             'IND_ESTADO' => 'A',
         ]);
 
-        DB::table('seguridad_USUARIO_EMPRESA')->insert([
+        DB::table('seguridad.USUARIO_EMPRESA')->insert([
             'COD_EMP' => $empresaCodigo,
             'COD_USUARIO' => $username,
             'IND_ESTADO' => 'A',
         ]);
 
-        DB::table('seguridad_SISTEMA')->insert([
+        DB::table('seguridad.SISTEMA')->insert([
             [
                 'COD_SISTEMA' => '014',
                 'DES_SISTEMA' => 'Mesa de Partes Virtual',
@@ -80,7 +80,7 @@ trait SeedsRealIdentityContext
             ],
         ]);
 
-        DB::table('seguridad_USUARIO_SISTEMA')->insert([
+        DB::table('seguridad.USUARIO_SISTEMA')->insert([
             [
                 'COD_EMP' => $empresaCodigo,
                 'COD_USUARIO' => $username,
@@ -96,3 +96,4 @@ trait SeedsRealIdentityContext
         ]);
     }
 }
+

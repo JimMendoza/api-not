@@ -10,12 +10,6 @@ class MoveCacheTableToPublicSchema extends Migration
     {
         $connection = Schema::getConnection();
 
-        if ($connection->getDriverName() !== 'pgsql') {
-            $this->createCacheTableIfMissing('cache');
-
-            return;
-        }
-
         if (! $this->tableExists('public', 'cache')) {
             $this->createCacheTableIfMissing('cache');
         }
@@ -36,10 +30,6 @@ class MoveCacheTableToPublicSchema extends Migration
     public function down()
     {
         $connection = Schema::getConnection();
-
-        if ($connection->getDriverName() !== 'pgsql') {
-            return;
-        }
 
         if (! $this->tableExists('app_mobile', 'cache')) {
             $connection->statement(

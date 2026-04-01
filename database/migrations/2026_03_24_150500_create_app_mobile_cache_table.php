@@ -28,19 +28,11 @@ class CreateAppMobileCacheTable extends Migration
 
     protected function tableName($table)
     {
-        if (Schema::getConnection()->getDriverName() === 'pgsql') {
-            return 'app_mobile.'.$table;
-        }
-
-        return 'app_mobile_'.$table;
+        return 'app_mobile.'.$table;
     }
 
     protected function tableExists($qualifiedTable)
     {
-        if (Schema::getConnection()->getDriverName() !== 'pgsql') {
-            return Schema::hasTable($qualifiedTable);
-        }
-
         [$schema, $table] = explode('.', $qualifiedTable, 2);
 
         $row = Schema::getConnection()->selectOne(

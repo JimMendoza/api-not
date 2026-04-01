@@ -36,13 +36,13 @@ class RealIdentityAuthFeatureTest extends TestCase
                 'tokenType',
             ]);
 
-        $this->assertDatabaseHas('app_mobile_usuario_tokens', [
+        $this->assertDatabaseHas('app_mobile.usuario_tokens', [
             'usuario_id' => 101,
             'empresa_codigo' => 'EMP-001',
             'token_type' => config('mobile.token_type', 'Bearer'),
         ]);
 
-        $storedToken = DB::table('app_mobile_usuario_tokens')
+        $storedToken = DB::table('app_mobile.usuario_tokens')
             ->where('usuario_id', 101)
             ->first();
 
@@ -104,7 +104,7 @@ class RealIdentityAuthFeatureTest extends TestCase
     {
         $token = $this->loginRealIdentityUser();
 
-        DB::table('app_mobile_usuario_tokens')
+        DB::table('app_mobile.usuario_tokens')
             ->update([
                 'expires_at' => now()->subMinute(),
                 'updated_at' => now(),
@@ -127,7 +127,7 @@ class RealIdentityAuthFeatureTest extends TestCase
         $hashedToken = hash('sha256', $token);
 
         $initialExpiration = Carbon::parse(
-            DB::table('app_mobile_usuario_tokens')
+            DB::table('app_mobile.usuario_tokens')
                 ->where('token', $hashedToken)
                 ->value('expires_at')
         );
@@ -140,7 +140,7 @@ class RealIdentityAuthFeatureTest extends TestCase
             ->assertOk();
 
         $renewedExpiration = Carbon::parse(
-            DB::table('app_mobile_usuario_tokens')
+            DB::table('app_mobile.usuario_tokens')
                 ->where('token', $hashedToken)
                 ->value('expires_at')
         );
@@ -154,7 +154,7 @@ class RealIdentityAuthFeatureTest extends TestCase
     {
         $this->seedRealIdentityContext();
 
-        DB::table('maestro_EMPRESA')->insert([
+        DB::table('maestro.EMPRESA')->insert([
             'COD_EMP' => 'EMP-999',
             'DES_EMP' => 'Empresa Inactiva',
             'IMAGEN' => 'x.png',
@@ -193,3 +193,4 @@ class RealIdentityAuthFeatureTest extends TestCase
             ->assertExactJson(config('mobile.modules'));
     }
 }
+

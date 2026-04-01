@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class BackfillAppMobileUsuarioTokensExpiration extends Migration
 {
@@ -37,19 +36,11 @@ class BackfillAppMobileUsuarioTokensExpiration extends Migration
 
     protected function tableName(): string
     {
-        if ($this->schema()->getConnection()->getDriverName() === 'pgsql') {
-            return 'app_mobile.usuario_tokens';
-        }
-
-        return 'app_mobile_usuario_tokens';
+        return 'app_mobile.usuario_tokens';
     }
 
     protected function tableExists(string $qualifiedTable): bool
     {
-        if ($this->schema()->getConnection()->getDriverName() !== 'pgsql') {
-            return $this->schema()->hasTable($qualifiedTable);
-        }
-
         [$schema, $table] = explode('.', $qualifiedTable, 2);
 
         $row = DB::connection($this->connectionName())->selectOne(
@@ -62,10 +53,6 @@ class BackfillAppMobileUsuarioTokensExpiration extends Migration
 
     protected function columnExists(string $qualifiedTable, string $column): bool
     {
-        if ($this->schema()->getConnection()->getDriverName() !== 'pgsql') {
-            return $this->schema()->hasColumn($qualifiedTable, $column);
-        }
-
         [$schema, $table] = explode('.', $qualifiedTable, 2);
 
         $row = DB::connection($this->connectionName())->selectOne(
@@ -74,10 +61,5 @@ class BackfillAppMobileUsuarioTokensExpiration extends Migration
         );
 
         return (bool) $row;
-    }
-
-    protected function schema()
-    {
-        return Schema::connection($this->connectionName());
     }
 }

@@ -65,7 +65,7 @@ class RealTramitesFeatureTest extends TestCase
             'ESTADO_ID' => 2,
         ]);
 
-        DB::table('app_mobile_tramite_seguimientos')->insert([
+        DB::table('app_mobile.tramite_seguimientos')->insert([
             'usuario_id' => 101,
             'tramite_id' => 501,
             'activo' => true,
@@ -73,7 +73,7 @@ class RealTramitesFeatureTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('app_mobile_notificaciones')->insert([
+        DB::table('app_mobile.notificaciones')->insert([
             [
                 'usuario_id' => 101,
                 'tramite_id' => 501,
@@ -187,7 +187,7 @@ class RealTramitesFeatureTest extends TestCase
                 'mensaje' => 'Trámite marcado para seguimiento.',
             ]);
 
-        $this->assertDatabaseHas('app_mobile_tramite_seguimientos', [
+        $this->assertDatabaseHas('app_mobile.tramite_seguimientos', [
             'usuario_id' => 101,
             'tramite_id' => 601,
             'activo' => 1,
@@ -200,7 +200,7 @@ class RealTramitesFeatureTest extends TestCase
                 'mensaje' => 'Seguimiento eliminado.',
             ]);
 
-        $this->assertDatabaseHas('app_mobile_tramite_seguimientos', [
+        $this->assertDatabaseHas('app_mobile.tramite_seguimientos', [
             'usuario_id' => 101,
             'tramite_id' => 601,
             'activo' => 0,
@@ -236,7 +236,7 @@ class RealTramitesFeatureTest extends TestCase
 
     protected function seedEstado($id, $descripcionUser)
     {
-        DB::table('virtual_ESTADO')->insert([
+        DB::table('virtual.ESTADO')->insert([
             'ID' => $id,
             'DESCRIPCION' => $descripcionUser,
             'DESCRIPCION_MP' => $descripcionUser,
@@ -246,10 +246,11 @@ class RealTramitesFeatureTest extends TestCase
 
     protected function seedRemito(array $data)
     {
-        DB::table('virtual_REMITO')->insert(array_merge([
+        DB::table('virtual.REMITO')->insert(array_merge([
             'CREATED_AT' => '2026-03-24 08:00:00',
             'UPDATED_AT' => '2026-03-24 08:00:00',
             'DELETED_AT' => null,
         ], $data));
     }
 }
+

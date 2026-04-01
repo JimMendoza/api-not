@@ -32,7 +32,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
     {
         $contexto = $this->crearContextoReal();
 
-        DB::table('app_mobile_usuario_dispositivos')->insert([
+        DB::table('app_mobile.usuario_dispositivos')->insert([
             'usuario_id' => 101,
             'device_id' => 'device-int-real-001',
             'push_token' => 'token-int-real-001',
@@ -74,7 +74,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
                 ],
             ]);
 
-        $this->assertDatabaseHas('app_mobile_notificaciones', [
+        $this->assertDatabaseHas('app_mobile.notificaciones', [
             'usuario_id' => 101,
             'tramite_id' => $contexto['tramiteId'],
             'tipo' => 'tramite_derivado',
@@ -125,7 +125,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
     {
         $contexto = $this->crearContextoReal();
 
-        DB::table('app_mobile_usuario_dispositivos')->insert([
+        DB::table('app_mobile.usuario_dispositivos')->insert([
             'usuario_id' => 101,
             'device_id' => 'device-int-real-fail',
             'push_token' => 'token-int-real-fail',
@@ -163,7 +163,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
                 ],
             ]);
 
-        $this->assertDatabaseHas('app_mobile_notificaciones', [
+        $this->assertDatabaseHas('app_mobile.notificaciones', [
             'usuario_id' => 101,
             'tramite_id' => $contexto['tramiteId'],
             'tipo' => 'movimiento_hoja_ruta',
@@ -177,7 +177,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
     {
         $contexto = $this->crearContextoReal();
 
-        DB::table('app_mobile_usuario_notificacion_configuraciones')->insert([
+        DB::table('app_mobile.usuario_notificacion_configuraciones')->insert([
             'usuario_id' => 101,
             'silenciar_fuera_de_horario' => true,
             'hora_silencio_inicio' => '22:00',
@@ -188,7 +188,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        DB::table('app_mobile_usuario_dispositivos')->insert([
+        DB::table('app_mobile.usuario_dispositivos')->insert([
             'usuario_id' => 101,
             'device_id' => 'device-int-real-silent',
             'push_token' => 'token-int-real-silent',
@@ -235,7 +235,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
     {
         $contexto = $this->crearContextoReal();
 
-        DB::table('app_mobile_tramite_seguimientos')
+        DB::table('app_mobile.tramite_seguimientos')
             ->where('usuario_id', 101)
             ->where('tramite_id', $contexto['tramiteId'])
             ->update([
@@ -243,7 +243,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
                 'updated_at' => now(),
             ]);
 
-        DB::table('app_mobile_usuario_dispositivos')->insert([
+        DB::table('app_mobile.usuario_dispositivos')->insert([
             'usuario_id' => 101,
             'device_id' => 'device-int-real-not-followed',
             'push_token' => 'token-int-real-not-followed',
@@ -277,7 +277,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
                 ],
             ]);
 
-        $this->assertDatabaseMissing('app_mobile_notificaciones', [
+        $this->assertDatabaseMissing('app_mobile.notificaciones', [
             'usuario_id' => 101,
             'tramite_id' => $contexto['tramiteId'],
             'tipo' => 'tramite_derivado',
@@ -298,14 +298,14 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
     {
         $this->seedRealIdentityContext();
 
-        DB::table('virtual_ESTADO')->insert([
+        DB::table('virtual.ESTADO')->insert([
             'ID' => 1,
             'DESCRIPCION' => 'Registrado',
             'DESCRIPCION_MP' => 'Registrado',
             'DESCRIPCION_USER' => 'Registrado',
         ]);
 
-        DB::table('virtual_REMITO')->insert([
+        DB::table('virtual.REMITO')->insert([
             'ID' => 9901,
             'NUMERO_DOCUMENTO' => 'TRM-INT-REAL-001',
             'NUMERO_EMISION' => '0000009901',
@@ -322,7 +322,7 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
             'DELETED_AT' => null,
         ]);
 
-        DB::table('app_mobile_tramite_seguimientos')->insert([
+        DB::table('app_mobile.tramite_seguimientos')->insert([
             'usuario_id' => 101,
             'tramite_id' => 9901,
             'activo' => true,
@@ -371,3 +371,4 @@ class RealNotificacionesEventoIntegracionFeatureTest extends TestCase
         };
     }
 }
+

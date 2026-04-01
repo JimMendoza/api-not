@@ -2,24 +2,26 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class CreateTestingTramiteVirtualTables extends Migration
 {
     public function up()
     {
-        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
-            return;
-        }
+        DB::statement('create schema if not exists virtual');
 
-        Schema::create('virtual_ESTADO', function (Blueprint $table) {
+        Schema::dropIfExists('virtual.REMITO');
+        Schema::dropIfExists('virtual.ESTADO');
+
+        Schema::create('virtual.ESTADO', function (Blueprint $table) {
             $table->integer('ID')->unique();
             $table->string('DESCRIPCION')->nullable();
             $table->string('DESCRIPCION_MP')->nullable();
             $table->string('DESCRIPCION_USER')->nullable();
         });
 
-        Schema::create('virtual_REMITO', function (Blueprint $table) {
+        Schema::create('virtual.REMITO', function (Blueprint $table) {
             $table->integer('ID')->unique();
             $table->string('NUMERO_EMISION')->nullable();
             $table->dateTime('FECHA_EMISION')->nullable();
@@ -39,11 +41,7 @@ class CreateTestingTramiteVirtualTables extends Migration
 
     public function down()
     {
-        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
-            return;
-        }
-
-        Schema::dropIfExists('virtual_REMITO');
-        Schema::dropIfExists('virtual_ESTADO');
+        Schema::dropIfExists('virtual.REMITO');
+        Schema::dropIfExists('virtual.ESTADO');
     }
 }

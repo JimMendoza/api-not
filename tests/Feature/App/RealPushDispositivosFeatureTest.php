@@ -46,7 +46,7 @@ class RealPushDispositivosFeatureTest extends TestCase
                 ],
             ]);
 
-        $this->assertDatabaseHas('app_mobile_usuario_dispositivos', [
+        $this->assertDatabaseHas('app_mobile.usuario_dispositivos', [
             'usuario_id' => 101,
             'device_id' => 'device-real-001',
             'push_token' => 'token-real-001',
@@ -63,7 +63,7 @@ class RealPushDispositivosFeatureTest extends TestCase
             ])
             ->assertOk();
 
-        $this->assertDatabaseHas('app_mobile_usuario_dispositivos', [
+        $this->assertDatabaseHas('app_mobile.usuario_dispositivos', [
             'usuario_id' => 101,
             'device_id' => 'device-real-001',
             'push_token' => 'token-real-002',
@@ -81,7 +81,7 @@ class RealPushDispositivosFeatureTest extends TestCase
                 'mensaje' => 'Token push invalidado correctamente.',
             ]);
 
-        $this->assertDatabaseHas('app_mobile_usuario_dispositivos', [
+        $this->assertDatabaseHas('app_mobile.usuario_dispositivos', [
             'usuario_id' => 101,
             'device_id' => 'device-real-001',
             'activo' => 0,
@@ -104,7 +104,7 @@ class RealPushDispositivosFeatureTest extends TestCase
                 'mensaje' => 'Sesión cerrada correctamente.',
             ]);
 
-        $this->assertDatabaseHas('app_mobile_usuario_dispositivos', [
+        $this->assertDatabaseHas('app_mobile.usuario_dispositivos', [
             'usuario_id' => 101,
             'device_id' => 'device-real-001',
             'activo' => 0,
@@ -129,3 +129,4 @@ class RealPushDispositivosFeatureTest extends TestCase
             ], 'errores');
     }
 }
+
