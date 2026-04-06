@@ -16,6 +16,6 @@ class EntidadController extends ApiController
 
     public function index()
     {
-        return $this->ok($this->realIdentityRepository->activeEmpresas());
+        return $this->ok($this->realIdentityRepository->ListEmpresas());
     }
 }

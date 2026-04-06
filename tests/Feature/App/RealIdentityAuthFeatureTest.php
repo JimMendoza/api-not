@@ -119,6 +119,25 @@ class RealIdentityAuthFeatureTest extends TestCase
             ]);
     }
 
+    public function test_token_sin_empresa_codigo_no_autentica()
+    {
+        $token = $this->loginRealIdentityUser();
+
+        DB::table('app_mobile.usuario_tokens')
+            ->update([
+                'empresa_codigo' => null,
+                'updated_at' => now(),
+            ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+        ])->getJson('/api/app/me')
+            ->assertStatus(401)
+            ->assertExactJson([
+                'mensaje' => 'No autenticado.',
+            ]);
+    }
+
     public function test_request_autenticado_renueva_expiracion_del_token()
     {
         Carbon::setTestNow(Carbon::parse('2026-03-27 10:00:00'));

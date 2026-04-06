@@ -97,11 +97,6 @@ class LegacyTramiteSql extends LegacySqlRepository
         return $normalized === '' ? null : $normalized;
     }
 
-    protected function normalizeKey($value): string
-    {
-        return trim((string) $value);
-    }
-
     protected function formatDate($value): ?string
     {
         if (! $value) {

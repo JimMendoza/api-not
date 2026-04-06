@@ -17,29 +17,25 @@ class RealIdentityRepository extends LegacySqlRepository
         return $this->hydrateUser($row);
     }
 
-    public function findUserByTokenContext(int $usuarioId, ?string $empresaCodigo = null): ?AuthenticatedAppUser
+    public function findUserByTokenContext(int $usuarioId, string $empresaCodigo): ?AuthenticatedAppUser
     {
-        $includeEmpresaFilter = $empresaCodigo !== null && trim($empresaCodigo) !== '';
-        $bindings = [$usuarioId];
-
-        if ($includeEmpresaFilter) {
-            $bindings[] = $this->normalizeKey($empresaCodigo);
-        }
-
         $row = $this->connection()->selectOne(
-            $this->userBaseSql(false, $includeEmpresaFilter),
-            $bindings
+            $this->userBaseSql(false),
+            [
+                $usuarioId,
+                $this->normalizeKey($empresaCodigo),
+            ]
         );
 
         return $this->hydrateUser($row);
     }
 
-    public function activeEmpresas(): array
+    public function ListEmpresas(): array
     {
         return collect($this->connection()->select(
             'select trim(e."COD_EMP") as codigo, e."DES_EMP" as nombre, e."IMAGEN" as imagen '
             .'from '.$this->schemaTable('maestro', 'EMPRESA').' e '
-            .'where '.$this->activePredicate('e').' '
+            .'where '.$this->SoloActivos('e').' '
             .'order by e."DES_EMP", trim(e."COD_EMP")'
         ))->map(function ($empresa) {
             return [
@@ -73,15 +69,11 @@ class RealIdentityRepository extends LegacySqlRepository
         ]);
     }
 
-    protected function userBaseSql(bool $byCredentials, bool $includeEmpresaFilter = false): string
+    protected function userBaseSql(bool $byCredentials): string
     {
         $where = $byCredentials
             ? 'trim(ue."COD_EMP") = ? and trim(u."COD_USUARIO") = ?'
-            : 'u."ID" = ?';
-
-        if ($includeEmpresaFilter) {
-            $where .= ' and trim(ue."COD_EMP") = ?';
-        }
+            : 'u."ID" = ? and trim(ue."COD_EMP") = ?';
 
         return 'select '
             .'u."ID" as usuario_id, '
@@ -99,9 +91,9 @@ class RealIdentityRepository extends LegacySqlRepository
                 .'on trim(ue."COD_USUARIO") = trim(u."COD_USUARIO") '
             .'inner join '.$this->schemaTable('maestro', 'EMPRESA').' e '
                 .'on trim(e."COD_EMP") = trim(ue."COD_EMP") '
-            .'where '.$this->activePredicate('u').' '
-                .'and '.$this->activePredicate('ue').' '
-                .'and '.$this->activePredicate('e').' '
+            .'where '.$this->SoloActivos('u').' '
+                .'and '.$this->SoloActivos('ue').' '
+                .'and '.$this->SoloActivos('e').' '
                 .'and '.$where.' '
             .'limit 1';
     }
@@ -113,8 +105,8 @@ class RealIdentityRepository extends LegacySqlRepository
             .'from '.$this->schemaTable('seguridad', 'USUARIO_SISTEMA').' us '
             .'inner join '.$this->schemaTable('seguridad', 'SISTEMA').' s '
                 .'on trim(s."COD_SISTEMA") = trim(us."COD_SISTEMA") '
-            .'where '.$this->activePredicate('us').' '
-                .'and '.$this->activePredicate('s').' '
+            .'where '.$this->SoloActivos('us').' '
+                .'and '.$this->SoloActivos('s').' '
                 .'and trim(us."COD_EMP") = ? '
                 .'and trim(us."COD_USUARIO") = ? '
             .'order by trim(us."COD_SISTEMA")',
@@ -157,29 +149,8 @@ class RealIdentityRepository extends LegacySqlRepository
         return '';
     }
 
-    protected function activePredicate(string $alias): string
+    protected function SoloActivos(string $alias): string
     {
-        return "trim(coalesce({$alias}.\"IND_ESTADO\", 'A')) = 'A'";
-    }
-
-    protected function normalizeKey($value): string
-    {
-        return trim((string) $value);
-    }
-
-    protected function normalizeValue($value): string
-    {
-        return trim((string) $value);
-    }
-
-    protected function normalizeNullable($value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $normalized = trim((string) $value);
-
-        return $normalized === '' ? null : $normalized;
+        return "trim({$alias}.\"IND_ESTADO\") = 'A'";
     }
 }

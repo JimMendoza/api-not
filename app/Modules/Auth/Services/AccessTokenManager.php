@@ -56,9 +56,15 @@ class AccessTokenManager
             return null;
         }
 
+        $empresaCodigo = trim((string) $token->empresa_codigo);
+
+        if ($empresaCodigo === '') {
+            return null;
+        }
+
         $usuario = $this->realIdentityRepository->findUserByTokenContext(
             (int) $token->usuario_id,
-            $token->empresa_codigo
+            $empresaCodigo
         );
 
         if (! $usuario) {

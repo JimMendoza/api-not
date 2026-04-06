@@ -35,4 +35,25 @@ abstract class LegacySqlRepository
     {
         return $this->schemaTable('virtual', $table);
     }
+
+    protected function normalizeKey($value): string
+    {
+        return trim((string) $value);
+    }
+
+    protected function normalizeValue($value): string
+    {
+        return trim((string) $value);
+    }
+
+    protected function normalizeNullable($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized === '' ? null : $normalized;
+    }
 }
