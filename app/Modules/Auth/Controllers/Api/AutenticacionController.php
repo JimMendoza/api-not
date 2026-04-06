@@ -28,7 +28,7 @@ class AutenticacionController extends ApiController
     {
         $usuario = $this->realIdentityRepository->findUserForLogin(
             $request->input('codEmp'),
-            $request->input('username')
+            $request->input('codUsuario')
         );
 
         if (! $usuario || ! Hash::check($request->input('password'), $usuario->password)) {

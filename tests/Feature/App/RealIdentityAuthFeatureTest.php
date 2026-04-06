@@ -25,7 +25,7 @@ class RealIdentityAuthFeatureTest extends TestCase
         $this->seedRealIdentityContext();
 
         $response = $this->postJson('/api/app/login', [
-            'username' => 'movil.user',
+            'codUsuario' => 'movil.user',
             'password' => 'Secret123!',
             'codEmp' => 'EMP-001',
         ]);
@@ -81,7 +81,7 @@ class RealIdentityAuthFeatureTest extends TestCase
     public function test_me_usa_nom_usuario_como_fallback_de_nombre_visible()
     {
         $token = $this->loginRealIdentityUser([
-            'username' => '20131257750',
+            'codUsuario' => '20131257750',
             'nomUsuario' => 'Nombre Perfil Visible',
             'fullName' => [
                 'nombres' => '',

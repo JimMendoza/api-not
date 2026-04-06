@@ -33,7 +33,7 @@ Fecha de corte: 2026-03-27
 - Request:
 ```json
 {
-  "username": "20131257750",
+  "codUsuario": "20131257750",
   "password": "<temporal>",
   "codEmp": "0002"
 }

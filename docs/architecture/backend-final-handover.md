@@ -8,7 +8,7 @@
 - **Ruta del repo**: `C:\laragon\www\app-not\api-not`
 - **Archivo canónico**: `docs/architecture/backend-final-handover.md`
 - **Propósito del backend**: exponer la API móvil de NOT sobre Laravel, autenticando usuarios reales de la base `tramite`, resolviendo trámites/notificaciones sobre tablas reales y persistiendo estado móvil propio en `app_mobile`.
-- **Fecha de última actualización**: `2026-04-01`
+- **Fecha de última actualización**: `2026-04-06`
 - **Estado general**: `operativo, estable y limpio fuera de hoja-ruta`
 - **Pendiente funcional aceptado**: `GET /api/app/tramites/{id}/hoja-ruta` responde `501` hasta contar con una fuente real de movimientos.
 
@@ -283,7 +283,7 @@ flowchart LR
 | Ruta | Función exacta | Módulo / uso | Tipo |
 | --- | --- | --- | --- |
 | `app/Support/Http/Requests/ApiRequest.php` | Base request con respuesta `422` y `403` homogénea | Base API app | Runtime activo |
-| `app/Modules/Auth/Requests/LoginRequest.php` | Valida `username`, `password`, `codEmp` | Auth móvil | Runtime activo |
+| `app/Modules/Auth/Requests/LoginRequest.php` | Valida `codUsuario`, `password`, `codEmp` | Auth móvil | Runtime activo |
 | `app/Modules/Notificaciones/Requests/UpdateNotificacionConfiguracionRequest.php` | Valida contrato v2 y fija `America/Lima` | Configuración notificaciones | Runtime activo |
 | `app/Modules/Notificaciones/Requests/UpsertDispositivoPushRequest.php` | Valida alta/actualización de push token | Push dispositivos | Runtime activo |
 | `app/Modules/Notificaciones/Requests/InvalidateDispositivoPushRequest.php` | Valida invalidación por `deviceId` | Push dispositivos | Runtime activo |
@@ -599,7 +599,7 @@ No existen foreign keys entre `seguridad`, `maestro`, `virtual` y `app_mobile`. 
 
 ```json
 {
-  "username": "20131257750",
+  "codUsuario": "20131257750",
   "password": "secreto",
   "codEmp": "0002"
 }
@@ -1277,6 +1277,7 @@ Fuera de `hoja-ruta`, **no queda otra deuda seria de backend** documentada al mo
 - `2026-03-27`: creación inicial del documento canónico `docs/architecture/backend-final-handover.md` con arquitectura, inventario, datos, contratos, operación, testing y riesgos del backend final `api-not`.
 - `2026-03-31`: consolidación estructural final en `app/Modules/*` y `app/Support/*`, incluyendo limpieza de paths viejos y verificación de consistencia de referencias.
 - `2026-04-01`: migración a PostgreSQL-only en runtime/testing, eliminación de compatibilidad multibase previa en helpers/migraciones y actualización de documentación canónica de operación/testing.
+- `2026-04-06`: ajuste de contrato de `POST /api/app/login` para request con `codUsuario` (en lugar de `username`) y alineación de validación/tests.
 
 
 

@@ -19,7 +19,7 @@ trait SeedsRealIdentityContext
         $this->seedRealIdentityContext($credentials);
 
         $response = $this->postJson('/api/app/login', [
-            'username' => $credentials['username'] ?? 'movil.user',
+            'codUsuario' => $credentials['codUsuario'] ?? $credentials['username'] ?? 'movil.user',
             'password' => $credentials['password'] ?? 'Secret123!',
             'codEmp' => $credentials['codEmp'] ?? 'EMP-001',
         ]);
@@ -32,7 +32,7 @@ trait SeedsRealIdentityContext
     protected function seedRealIdentityContext(array $overrides = [])
     {
         $empresaCodigo = $overrides['codEmp'] ?? 'EMP-001';
-        $username = $overrides['username'] ?? 'movil.user';
+        $codUsuario = $overrides['codUsuario'] ?? $overrides['username'] ?? 'movil.user';
         $password = $overrides['password'] ?? 'Secret123!';
         $usuarioId = $overrides['usuarioId'] ?? 101;
         $empresaNombre = $overrides['empresaNombre'] ?? 'Empresa Real Demo';
@@ -52,7 +52,7 @@ trait SeedsRealIdentityContext
 
         DB::table('seguridad.USUARIO')->insert([
             'ID' => $usuarioId,
-            'COD_USUARIO' => $username,
+            'COD_USUARIO' => $codUsuario,
             'NOM_USUARIO' => $overrides['nomUsuario'] ?? 'Usuario Movil',
             'NOMBRES' => $fullName['nombres'],
             'DES_APELLP' => $fullName['apellidoPaterno'],
@@ -63,7 +63,7 @@ trait SeedsRealIdentityContext
 
         DB::table('seguridad.USUARIO_EMPRESA')->insert([
             'COD_EMP' => $empresaCodigo,
-            'COD_USUARIO' => $username,
+            'COD_USUARIO' => $codUsuario,
             'IND_ESTADO' => 'A',
         ]);
 
@@ -83,13 +83,13 @@ trait SeedsRealIdentityContext
         DB::table('seguridad.USUARIO_SISTEMA')->insert([
             [
                 'COD_EMP' => $empresaCodigo,
-                'COD_USUARIO' => $username,
+                'COD_USUARIO' => $codUsuario,
                 'COD_SISTEMA' => '014',
                 'IND_ESTADO' => 'A',
             ],
             [
                 'COD_EMP' => $empresaCodigo,
-                'COD_USUARIO' => $username,
+                'COD_USUARIO' => $codUsuario,
                 'COD_SISTEMA' => '009',
                 'IND_ESTADO' => 'A',
             ],

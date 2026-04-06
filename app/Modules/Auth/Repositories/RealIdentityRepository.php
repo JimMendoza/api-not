@@ -7,11 +7,11 @@ use App\Modules\Auth\Support\AuthenticatedAppUser;
 
 class RealIdentityRepository extends LegacySqlRepository
 {
-    public function findUserForLogin(string $empresaCodigo, string $username): ?AuthenticatedAppUser
+    public function findUserForLogin(string $empresaCodigo, string $codUsuario): ?AuthenticatedAppUser
     {
-        $row = $this->connection()->selectOne($this->userBaseSql(true), [
+        $row = $this->connection()->selectOne($this->ConsultarUsuario(true), [
             $this->normalizeKey($empresaCodigo),
-            $this->normalizeKey($username),
+            $this->normalizeKey($codUsuario),
         ]);
 
         return $this->hydrateUser($row);
@@ -20,7 +20,7 @@ class RealIdentityRepository extends LegacySqlRepository
     public function findUserByTokenContext(int $usuarioId, string $empresaCodigo): ?AuthenticatedAppUser
     {
         $row = $this->connection()->selectOne(
-            $this->userBaseSql(false),
+            $this->ConsultarUsuario(false),
             [
                 $usuarioId,
                 $this->normalizeKey($empresaCodigo),
@@ -69,7 +69,7 @@ class RealIdentityRepository extends LegacySqlRepository
         ]);
     }
 
-    protected function userBaseSql(bool $byCredentials): string
+    protected function ConsultarUsuario(bool $byCredentials): string
     {
         $where = $byCredentials
             ? 'trim(ue."COD_EMP") = ? and trim(u."COD_USUARIO") = ?'
