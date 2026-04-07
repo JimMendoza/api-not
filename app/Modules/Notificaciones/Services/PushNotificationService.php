@@ -266,6 +266,7 @@ class PushNotificationService
                 'priority' => 'high',
                 'notification' => [
                     'channel_id' => 'notificaciones_generales',
+                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                     'notification_count' => $noLeidas,
                 ],
             ],

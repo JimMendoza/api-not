@@ -35,7 +35,10 @@ class AutenticacionController extends ApiController
             return $this->error('Credenciales inválidas.', 401);
         }
 
-        $issuedToken = $accessTokenManager->issue($usuario);
+        $issuedToken = $accessTokenManager->issue(
+            $usuario,
+            (string) $request->input('deviceId')
+        );
 
         return $this->ok([
             'accessToken' => $issuedToken['plainTextToken'],

@@ -97,7 +97,8 @@ El backend sigue un patrón Laravel limpio y explícito:
 
 - `POST /api/app/login` busca el usuario real con `RealIdentityRepository`.
 - La contraseña se verifica con `Hash::check` contra `seguridad."USUARIO"."USU_CLAVE"`.
-- `AccessTokenManager` emite un token aleatorio de 80 caracteres, almacena su hash SHA-256 y guarda contexto de usuario + empresa.
+- `AccessTokenManager` emite un token aleatorio de 80 caracteres, almacena su hash SHA-256 y guarda contexto de usuario + empresa + device.
+- Antes de emitir un token nuevo, revoca cualquier token activo del mismo `usuario_id + empresa_codigo + device_id`.
 - `AuthenticateAppToken` resuelve el bearer token, renueva `expires_at` y expone `Request::user()` como `AuthenticatedAppUser`.
 - La auth móvil **no** depende de `guards` estándar de Laravel; `config/auth.php` quedó solo como soporte framework.
 
@@ -283,7 +284,7 @@ flowchart LR
 | Ruta | Función exacta | Módulo / uso | Tipo |
 | --- | --- | --- | --- |
 | `app/Support/Http/Requests/ApiRequest.php` | Base request con respuesta `422` y `403` homogénea | Base API app | Runtime activo |
-| `app/Modules/Auth/Requests/LoginRequest.php` | Valida `codUsuario`, `password`, `codEmp` | Auth móvil | Runtime activo |
+| `app/Modules/Auth/Requests/LoginRequest.php` | Valida `codUsuario`, `password`, `codEmp`, `deviceId` | Auth movil | Runtime activo |
 | `app/Modules/Notificaciones/Requests/UpdateNotificacionConfiguracionRequest.php` | Valida contrato v2 y fija `America/Lima` | Configuración notificaciones | Runtime activo |
 | `app/Modules/Notificaciones/Requests/UpsertDispositivoPushRequest.php` | Valida alta/actualización de push token | Push dispositivos | Runtime activo |
 | `app/Modules/Notificaciones/Requests/InvalidateDispositivoPushRequest.php` | Valida invalidación por `deviceId` | Push dispositivos | Runtime activo |
@@ -379,6 +380,7 @@ flowchart LR
 | `database/migrations/2026_03_24_090000_create_app_mobile_schema.php` | Crea esquema `app_mobile` | Persistencia móvil | Runtime activo |
 | `database/migrations/2026_03_24_090100_create_app_mobile_tables.php` | Crea tablas móviles base | Persistencia móvil | Runtime activo |
 | `database/migrations/2026_03_24_100200_add_empresa_codigo_to_app_mobile_usuario_tokens_table.php` | Agrega contexto de empresa a tokens | Auth móvil | Runtime activo |
+| `database/migrations/2026_04_07_160000_add_device_id_to_app_mobile_usuario_tokens_table.php` | Agrega `device_id` a tokens y crea indice por contexto de dispositivo | Auth movil | Runtime activo |
 | `database/migrations/2026_03_24_150500_create_app_mobile_cache_table.php` | Paso histórico: cache en `app_mobile` | Evolución de infraestructura | Histórico |
 | `database/migrations/2026_03_25_090000_move_cache_table_to_public_schema.php` | Mueve `cache` a `public` | Infra cache | Runtime activo |
 | `database/migrations/2026_03_27_090000_create_queue_tables.php` | Crea `jobs` y `failed_jobs` | Cola | Runtime activo |
@@ -488,7 +490,7 @@ flowchart LR
 
 | Tabla | Uso principal | Columnas clave |
 | --- | --- | --- |
-| `app_mobile.usuario_tokens` | Tokens móviles propios | `usuario_id`, `empresa_codigo`, `token`, `token_type`, `expires_at`, `last_used_at`, `revoked_at` |
+| `app_mobile.usuario_tokens` | Tokens moviles propios | `usuario_id`, `empresa_codigo`, `device_id`, `token`, `token_type`, `expires_at`, `last_used_at`, `revoked_at` |
 | `app_mobile.tramite_seguimientos` | Seguimiento activo/inactivo por usuario y trámite | `usuario_id`, `tramite_id`, `activo` |
 | `app_mobile.usuario_notificacion_configuraciones` | Configuración v2 de notificaciones | `usuario_id`, `silenciar_fuera_de_horario`, `hora_silencio_inicio`, `hora_silencio_fin`, `zona_horaria`, `mostrar_contador_no_leidas` |
 | `app_mobile.usuario_dispositivos` | Dispositivos FCM registrados | `usuario_id`, `device_id`, `push_token`, `platform`, `activo`, `ultimo_registro_at`, `ultimo_push_at`, `invalidado_at` |
@@ -601,7 +603,8 @@ No existen foreign keys entre `seguridad`, `maestro`, `virtual` y `app_mobile`. 
 {
   "codUsuario": "20131257750",
   "password": "secreto",
-  "codEmp": "0002"
+  "codEmp": "0002",
+  "deviceId": "android-1712580000000-123456"
 }
 ```
 
@@ -619,8 +622,10 @@ No existen foreign keys entre `seguridad`, `maestro`, `virtual` y `app_mobile`. 
   - `422` por payload inválido
 - Reglas importantes:
   - autentica contra tablas reales de `seguridad`
+  - `deviceId` es obligatorio (tambien se acepta `device_id` y header `X-App-Device-Id` para normalizacion del request)
   - no devuelve perfil, solo token
   - el TTL inicial es de 30 días
+  - antes de emitir un nuevo token, revoca token activo previo del mismo `usuario_id + empresa_codigo + device_id`
 
 #### `POST /api/app/logout`
 
@@ -957,6 +962,7 @@ Si el worker no corre:
 - `data.targetScreen = notificaciones`
 - `data.noLeidas`
 - `android.notification.notification_count = noLeidas`
+- `android.notification.click_action = FLUTTER_NOTIFICATION_CLICK`
 - APNS con `sound = default`
 
 ### Logs emitidos por el flujo
@@ -1278,6 +1284,7 @@ Fuera de `hoja-ruta`, **no queda otra deuda seria de backend** documentada al mo
 - `2026-03-31`: consolidación estructural final en `app/Modules/*` y `app/Support/*`, incluyendo limpieza de paths viejos y verificación de consistencia de referencias.
 - `2026-04-01`: migración a PostgreSQL-only en runtime/testing, eliminación de compatibilidad multibase previa en helpers/migraciones y actualización de documentación canónica de operación/testing.
 - `2026-04-06`: ajuste de contrato de `POST /api/app/login` para request con `codUsuario` (en lugar de `username`) y alineación de validación/tests.
+- `2026-04-07`: login exige `deviceId`, tokens quedan contextualizados por `device_id` con revocacion previa por mismo usuario/empresa/device, se agrega migracion `2026_04_07_160000_add_device_id_to_app_mobile_usuario_tokens_table.php` y el payload push Android incluye `click_action = FLUTTER_NOTIFICATION_CLICK`.
 
 
 

@@ -28,6 +28,7 @@ class RealIdentityAuthFeatureTest extends TestCase
             'codUsuario' => 'movil.user',
             'password' => 'Secret123!',
             'codEmp' => 'EMP-001',
+            'deviceId' => 'device-real-001',
         ]);
 
         $response->assertOk()
@@ -39,6 +40,7 @@ class RealIdentityAuthFeatureTest extends TestCase
         $this->assertDatabaseHas('app_mobile.usuario_tokens', [
             'usuario_id' => 101,
             'empresa_codigo' => 'EMP-001',
+            'device_id' => 'device-real-001',
             'token_type' => config('mobile.token_type', 'Bearer'),
         ]);
 
@@ -48,6 +50,89 @@ class RealIdentityAuthFeatureTest extends TestCase
 
         $this->assertNotNull($storedToken);
         $this->assertNotNull($storedToken->expires_at);
+    }
+
+    public function test_login_requiere_device_id()
+    {
+        $this->seedRealIdentityContext();
+
+        $this->withHeaders([
+            'X-App-Device-Id' => '',
+        ])->postJson('/api/app/login', [
+            'codUsuario' => 'movil.user',
+            'password' => 'Secret123!',
+            'codEmp' => 'EMP-001',
+        ])->assertStatus(422)
+            ->assertJsonStructure([
+                'mensaje',
+                'errores' => [
+                    'deviceId',
+                ],
+            ]);
+    }
+
+    public function test_login_revoca_token_previo_del_mismo_usuario_empresa_y_device()
+    {
+        $this->seedRealIdentityContext();
+
+        $firstLogin = $this->postJson('/api/app/login', [
+            'codUsuario' => 'movil.user',
+            'password' => 'Secret123!',
+            'codEmp' => 'EMP-001',
+            'deviceId' => 'device-real-001',
+        ])->assertOk();
+
+        $firstHash = hash('sha256', (string) $firstLogin->json('accessToken'));
+
+        $secondLogin = $this->postJson('/api/app/login', [
+            'codUsuario' => 'movil.user',
+            'password' => 'Secret123!',
+            'codEmp' => 'EMP-001',
+            'deviceId' => 'device-real-001',
+        ])->assertOk();
+
+        $secondHash = hash('sha256', (string) $secondLogin->json('accessToken'));
+
+        $firstToken = DB::table('app_mobile.usuario_tokens')
+            ->where('token', $firstHash)
+            ->first();
+
+        $secondToken = DB::table('app_mobile.usuario_tokens')
+            ->where('token', $secondHash)
+            ->first();
+
+        $this->assertNotNull($firstToken);
+        $this->assertNotNull($secondToken);
+        $this->assertNotNull($firstToken->revoked_at);
+        $this->assertNull($secondToken->revoked_at);
+    }
+
+    public function test_login_en_otro_device_no_revoca_token_activo_del_device_anterior()
+    {
+        $this->seedRealIdentityContext();
+
+        $firstLogin = $this->postJson('/api/app/login', [
+            'codUsuario' => 'movil.user',
+            'password' => 'Secret123!',
+            'codEmp' => 'EMP-001',
+            'deviceId' => 'device-real-001',
+        ])->assertOk();
+
+        $firstHash = hash('sha256', (string) $firstLogin->json('accessToken'));
+
+        $this->postJson('/api/app/login', [
+            'codUsuario' => 'movil.user',
+            'password' => 'Secret123!',
+            'codEmp' => 'EMP-001',
+            'deviceId' => 'device-real-002',
+        ])->assertOk();
+
+        $firstToken = DB::table('app_mobile.usuario_tokens')
+            ->where('token', $firstHash)
+            ->first();
+
+        $this->assertNotNull($firstToken);
+        $this->assertNull($firstToken->revoked_at);
     }
 
     public function test_me_devuelve_contrato_real_desde_tramite()

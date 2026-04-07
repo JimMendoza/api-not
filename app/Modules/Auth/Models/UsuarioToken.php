@@ -9,6 +9,7 @@ class UsuarioToken extends AppMobileModel
     protected $fillable = [
         'usuario_id',
         'empresa_codigo',
+        'device_id',
         'token',
         'token_type',
         'expires_at',

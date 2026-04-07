@@ -22,6 +22,7 @@ trait SeedsRealIdentityContext
             'codUsuario' => $credentials['codUsuario'] ?? $credentials['username'] ?? 'movil.user',
             'password' => $credentials['password'] ?? 'Secret123!',
             'codEmp' => $credentials['codEmp'] ?? 'EMP-001',
+            'deviceId' => $credentials['deviceId'] ?? 'device-real-001',
         ]);
 
         $response->assertOk();

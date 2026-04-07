@@ -14,7 +14,7 @@ class RealIdentityRepository extends LegacySqlRepository
             $this->normalizeKey($codUsuario),
         ]);
 
-        return $this->hydrateUser($row);
+        return $this->mapearUsuario($row);
     }
 
     public function findUserByTokenContext(int $usuarioId, string $empresaCodigo): ?AuthenticatedAppUser
@@ -27,7 +27,7 @@ class RealIdentityRepository extends LegacySqlRepository
             ]
         );
 
-        return $this->hydrateUser($row);
+        return $this->mapearUsuario($row);
     }
 
     public function ListEmpresas(): array
@@ -47,7 +47,7 @@ class RealIdentityRepository extends LegacySqlRepository
         })->values()->all();
     }
 
-    protected function hydrateUser($row): ?AuthenticatedAppUser
+    protected function mapearUsuario($row): ?AuthenticatedAppUser
     {
         if (! $row) {
             return null;
@@ -65,7 +65,7 @@ class RealIdentityRepository extends LegacySqlRepository
             'empresaCodigo' => $empresaCodigo,
             'empresaNombre' => $this->normalizeValue($row->empresa_nombre),
             'empresaImagen' => $this->normalizeNullable($row->empresa_imagen),
-            'permisos' => $this->permissionIdsFor($codUsuario, $empresaCodigo),
+            'permisos' => $this->ConsultarPermisos($codUsuario, $empresaCodigo),
         ]);
     }
 
@@ -98,7 +98,7 @@ class RealIdentityRepository extends LegacySqlRepository
             .'limit 1';
     }
 
-    protected function permissionIdsFor(string $codUsuario, string $empresaCodigo): array
+    protected function ConsultarPermisos(string $codUsuario, string $empresaCodigo): array
     {
         $systemCodes = collect($this->connection()->select(
             'select trim(us."COD_SISTEMA") as codigo '
@@ -128,25 +128,15 @@ class RealIdentityRepository extends LegacySqlRepository
 
     protected function buildFullName($row): string
     {
-        $parts = array_filter([
+        $fullName = implode(' ', array_filter([
             $this->normalizeNullable($row->nombres),
             $this->normalizeNullable($row->apellido_paterno),
             $this->normalizeNullable($row->apellido_materno),
-        ], function ($value) {
-            return $value !== null && $value !== '';
-        });
+        ]));
 
-        if (! empty($parts)) {
-            return implode(' ', $parts);
-        }
-
-        $nombreUsuario = $this->normalizeNullable($row->nom_usuario);
-
-        if ($nombreUsuario) {
-            return $nombreUsuario;
-        }
-
-        return '';
+        return $fullName !== ''
+            ? $fullName
+            : ($this->normalizeNullable($row->nom_usuario) ?? '');
     }
 
     protected function SoloActivos(string $alias): string

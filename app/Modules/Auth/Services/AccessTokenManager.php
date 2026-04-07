@@ -16,8 +16,17 @@ class AccessTokenManager
         $this->realIdentityRepository = $realIdentityRepository;
     }
 
-    public function issue(AuthenticatedAppUser $usuario): array
+    public function issue(AuthenticatedAppUser $usuario, string $deviceId): array
     {
+        $empresaCodigo = trim((string) $usuario->empresaCodigo);
+        $normalizedDeviceId = $this->normalizeDeviceId($deviceId);
+
+        $this->revokeActiveByDeviceContext(
+            (int) $usuario->id,
+            $empresaCodigo,
+            $normalizedDeviceId
+        );
+
         do {
             $plainTextToken = Str::random(80);
             $hashedToken = hash('sha256', $plainTextToken);
@@ -25,7 +34,8 @@ class AccessTokenManager
 
         $token = UsuarioToken::query()->create([
             'usuario_id' => $usuario->id,
-            'empresa_codigo' => $usuario->empresaCodigo,
+            'empresa_codigo' => $empresaCodigo,
+            'device_id' => $normalizedDeviceId,
             'token' => $hashedToken,
             'token_type' => $this->tokenType(),
             'expires_at' => $this->nextExpiration(),
@@ -97,6 +107,27 @@ class AccessTokenManager
         return UsuarioToken::query()
             ->where('token', $hashedToken)
             ->exists();
+    }
+
+    protected function normalizeDeviceId(string $deviceId): string
+    {
+        return trim($deviceId);
+    }
+
+    protected function revokeActiveByDeviceContext(
+        int $usuarioId,
+        string $empresaCodigo,
+        string $deviceId
+    ): void {
+        UsuarioToken::query()
+            ->where('usuario_id', $usuarioId)
+            ->where('empresa_codigo', $empresaCodigo)
+            ->where('device_id', $deviceId)
+            ->whereNull('revoked_at')
+            ->update([
+                'revoked_at' => now(),
+                'updated_at' => now(),
+            ]);
     }
 
     protected function tokenType(): string
