@@ -381,6 +381,7 @@ flowchart LR
 | `database/migrations/2026_03_24_090100_create_app_mobile_tables.php` | Crea tablas móviles base | Persistencia móvil | Runtime activo |
 | `database/migrations/2026_03_24_100200_add_empresa_codigo_to_app_mobile_usuario_tokens_table.php` | Agrega contexto de empresa a tokens | Auth móvil | Runtime activo |
 | `database/migrations/2026_04_07_160000_add_device_id_to_app_mobile_usuario_tokens_table.php` | Agrega `device_id` a tokens y crea indice por contexto de dispositivo | Auth movil | Runtime activo |
+| `database/migrations/2026_04_09_120000_change_unique_key_on_app_mobile_usuario_dispositivos_table.php` | Cambia unicidad de dispositivos a `usuario_id + device_id` para historial por usuario y evita fuga de push entre cuentas | Push dispositivos | Runtime activo |
 | `database/migrations/2026_03_24_150500_create_app_mobile_cache_table.php` | Paso histórico: cache en `app_mobile` | Evolución de infraestructura | Histórico |
 | `database/migrations/2026_03_25_090000_move_cache_table_to_public_schema.php` | Mueve `cache` a `public` | Infra cache | Runtime activo |
 | `database/migrations/2026_03_27_090000_create_queue_tables.php` | Crea `jobs` y `failed_jobs` | Cola | Runtime activo |
@@ -402,7 +403,7 @@ flowchart LR
 | `tests/Feature/App/RealIdentityAuthFeatureTest.php` | Prueba login, `/me`, entidades, módulos y TTL rolling | Auth / identidad | Test |
 | `tests/Feature/App/RealTramitesFeatureTest.php` | Prueba trámites, seguimiento y `hoja-ruta 501` | Trámites | Test |
 | `tests/Feature/App/RealNotificacionesFeatureTest.php` | Prueba inbox histórico, resumen, marcar leída y configuración v2 | Notificaciones | Test |
-| `tests/Feature/App/RealPushDispositivosFeatureTest.php` | Prueba upsert/invalidate de push token y logout con deviceId | Push dispositivos | Test |
+| `tests/Feature/App/RealPushDispositivosFeatureTest.php` | Prueba upsert/invalidate de push token, logout con deviceId y cambio de usuario en mismo device sin fuga de push | Push dispositivos | Test |
 | `tests/Feature/Integracion/RealNotificacionesEventoIntegracionFeatureTest.php` | Prueba integración, quiet hours, `not_followed`, queue dispatch e inbox-first | Integración / Push | Test |
 | `tests/Support/Database/Migrations/2026_03_24_100000_create_testing_tramite_identity_tables.php` | Tablas PostgreSQL de `seguridad` y `maestro` (schemas reales) | Testing | Test support |
 | `tests/Support/Database/Migrations/2026_03_24_110000_create_testing_tramite_virtual_tables.php` | Tablas PostgreSQL de `virtual` (schema real) | Testing | Test support |
@@ -493,7 +494,7 @@ flowchart LR
 | `app_mobile.usuario_tokens` | Tokens moviles propios | `usuario_id`, `empresa_codigo`, `device_id`, `token`, `token_type`, `expires_at`, `last_used_at`, `revoked_at` |
 | `app_mobile.tramite_seguimientos` | Seguimiento activo/inactivo por usuario y trámite | `usuario_id`, `tramite_id`, `activo` |
 | `app_mobile.usuario_notificacion_configuraciones` | Configuración v2 de notificaciones | `usuario_id`, `silenciar_fuera_de_horario`, `hora_silencio_inicio`, `hora_silencio_fin`, `zona_horaria`, `mostrar_contador_no_leidas` |
-| `app_mobile.usuario_dispositivos` | Dispositivos FCM registrados | `usuario_id`, `device_id`, `push_token`, `platform`, `activo`, `ultimo_registro_at`, `ultimo_push_at`, `invalidado_at` |
+| `app_mobile.usuario_dispositivos` | Dispositivos FCM registrados con historial por usuario/device | `usuario_id`, `device_id`, `push_token`, `platform`, `activo`, `ultimo_registro_at`, `ultimo_push_at`, `invalidado_at` (unique por `usuario_id + device_id`) |
 | `app_mobile.notificaciones` | Inbox histórico del usuario | `usuario_id`, `tramite_id`, `titulo`, `mensaje`, `tipo`, `leida`, `fecha_hora` |
 
 #### `public`
@@ -513,7 +514,7 @@ flowchart LR
 - **Trámite visible**: `virtual."REMITO"` visible si `DELETED_AT is null`, `ADMINISTRADO_ID == COD_USUARIO` y `COD_EMP == empresa_codigo` del token.
 - **Seguimiento**: `app_mobile.tramite_seguimientos` controla solo la emisión futura de notificaciones.
 - **Inbox visible**: `app_mobile.notificaciones` pertenece al usuario y sigue visible mientras el trámite siga siendo visible para su contexto.
-- **Dispositivos**: `app_mobile.usuario_dispositivos` se resuelven por `usuario_id` y `activo = true`.
+- **Dispositivos**: `app_mobile.usuario_dispositivos` se resuelven por `usuario_id` y `activo = true`; al registrar un `device_id` para otro usuario, los registros activos previos de ese `device_id` se invalidan para evitar fuga de push.
 
 ### Reglas de visibilidad, seguimiento e inbox
 
@@ -806,6 +807,7 @@ No existen foreign keys entre `seguridad`, `maestro`, `virtual` y `app_mobile`. 
 - Request esperado: `deviceId`, `pushToken`, `platform`; opcionales `deviceName`, `appVersion`.
 - Acepta aliases snake_case de entrada.
 - Response esperada: `mensaje` + `dispositivo` canonical en camelCase.
+- Regla importante: el registro es unico por `usuario_id + device_id`; si el mismo `device_id` se registra con otro usuario, los registros activos previos de ese `device_id` se invalidan y se conserva historial.
 - Errores esperados: `422` por payload inválido.
 
 #### `DELETE /api/app/dispositivos/push-token`
@@ -1285,6 +1287,7 @@ Fuera de `hoja-ruta`, **no queda otra deuda seria de backend** documentada al mo
 - `2026-04-01`: migración a PostgreSQL-only en runtime/testing, eliminación de compatibilidad multibase previa en helpers/migraciones y actualización de documentación canónica de operación/testing.
 - `2026-04-06`: ajuste de contrato de `POST /api/app/login` para request con `codUsuario` (en lugar de `username`) y alineación de validación/tests.
 - `2026-04-07`: login exige `deviceId`, tokens quedan contextualizados por `device_id` con revocacion previa por mismo usuario/empresa/device, se agrega migracion `2026_04_07_160000_add_device_id_to_app_mobile_usuario_tokens_table.php` y el payload push Android incluye `click_action = FLUTTER_NOTIFICATION_CLICK`.
+- `2026-04-09`: `usuario_dispositivos` pasa a historico por `usuario_id + device_id` (migracion `2026_04_09_120000_change_unique_key_on_app_mobile_usuario_dispositivos_table.php`), el upsert invalida usuarios previos activos del mismo `device_id`, y se agrega cobertura de test para cambio de usuario en mismo dispositivo.
 
 
 

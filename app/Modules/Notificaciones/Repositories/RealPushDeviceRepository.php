@@ -6,24 +6,44 @@ use App\Modules\Notificaciones\Models\UsuarioDispositivo;
 use App\Modules\Auth\Support\AuthenticatedAppUser;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class RealPushDeviceRepository
 {
     public function upsertForUser(AuthenticatedAppUser $usuario, array $data): array
     {
-        $device = UsuarioDispositivo::query()->updateOrCreate(
-            ['device_id' => (string) $data['deviceId']],
-            [
-                'usuario_id' => $usuario->id,
-                'push_token' => (string) $data['pushToken'],
-                'platform' => (string) $data['platform'],
-                'device_name' => $data['deviceName'] ?? null,
-                'app_version' => $data['appVersion'] ?? null,
-                'activo' => true,
-                'ultimo_registro_at' => now(),
-                'invalidado_at' => null,
-            ]
-        );
+        $deviceId = (string) $data['deviceId'];
+        $device = null;
+
+        DB::transaction(function () use ($usuario, $data, $deviceId, &$device) {
+            // Prevent push leaks: same physical device can only stay active for one user at a time.
+            UsuarioDispositivo::query()
+                ->where('device_id', $deviceId)
+                ->where('usuario_id', '!=', $usuario->id)
+                ->where('activo', true)
+                ->update([
+                    'activo' => false,
+                    'invalidado_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            // Keep per-user history while allowing reactivation for the same user/device pair.
+            $device = UsuarioDispositivo::query()->updateOrCreate(
+                [
+                    'usuario_id' => $usuario->id,
+                    'device_id' => $deviceId,
+                ],
+                [
+                    'push_token' => (string) $data['pushToken'],
+                    'platform' => (string) $data['platform'],
+                    'device_name' => $data['deviceName'] ?? null,
+                    'app_version' => $data['appVersion'] ?? null,
+                    'activo' => true,
+                    'ultimo_registro_at' => now(),
+                    'invalidado_at' => null,
+                ]
+            );
+        });
 
         return $this->toPayload($device->fresh());
     }

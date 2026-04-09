@@ -4,6 +4,7 @@ namespace Tests\Feature\App;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Tests\Feature\App\Concerns\SeedsRealIdentityContext;
 use Tests\TestCase;
 
@@ -127,6 +128,93 @@ class RealPushDispositivosFeatureTest extends TestCase
                 'pushToken',
                 'platform',
             ], 'errores');
+    }
+
+    public function test_cambio_de_usuario_en_mismo_device_mantiene_historial_y_desactiva_previo()
+    {
+        $deviceId = 'device-real-shared-001';
+
+        $firstToken = $this->loginRealIdentityUser([
+            'deviceId' => $deviceId,
+        ]);
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$firstToken,
+        ])->putJson('/api/app/dispositivos/push-token', [
+            'deviceId' => $deviceId,
+            'pushToken' => 'token-user-101',
+            'platform' => 'android',
+        ])->assertOk();
+
+        DB::table('seguridad.USUARIO')->insert([
+            'ID' => 202,
+            'COD_USUARIO' => 'movil.user.2',
+            'NOM_USUARIO' => 'Usuario Movil 2',
+            'NOMBRES' => 'Usuario',
+            'DES_APELLP' => 'Movil',
+            'DES_APELLM' => 'Dos',
+            'USU_CLAVE' => Hash::make('Secret456!'),
+            'IND_ESTADO' => 'A',
+        ]);
+
+        DB::table('seguridad.USUARIO_EMPRESA')->insert([
+            'COD_EMP' => 'EMP-001',
+            'COD_USUARIO' => 'movil.user.2',
+            'IND_ESTADO' => 'A',
+        ]);
+
+        DB::table('seguridad.USUARIO_SISTEMA')->insert([
+            [
+                'COD_EMP' => 'EMP-001',
+                'COD_USUARIO' => 'movil.user.2',
+                'COD_SISTEMA' => '014',
+                'IND_ESTADO' => 'A',
+            ],
+            [
+                'COD_EMP' => 'EMP-001',
+                'COD_USUARIO' => 'movil.user.2',
+                'COD_SISTEMA' => '009',
+                'IND_ESTADO' => 'A',
+            ],
+        ]);
+
+        $secondLogin = $this->postJson('/api/app/login', [
+            'codUsuario' => 'movil.user.2',
+            'password' => 'Secret456!',
+            'codEmp' => 'EMP-001',
+            'deviceId' => $deviceId,
+        ])->assertOk();
+
+        $secondToken = $secondLogin->json('accessToken');
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$secondToken,
+        ])->putJson('/api/app/dispositivos/push-token', [
+            'deviceId' => $deviceId,
+            'pushToken' => 'token-user-202',
+            'platform' => 'android',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('app_mobile.usuario_dispositivos', [
+            'usuario_id' => 101,
+            'device_id' => $deviceId,
+            'push_token' => 'token-user-101',
+            'activo' => 0,
+        ]);
+
+        $this->assertDatabaseHas('app_mobile.usuario_dispositivos', [
+            'usuario_id' => 202,
+            'device_id' => $deviceId,
+            'push_token' => 'token-user-202',
+            'activo' => 1,
+        ]);
+
+        $this->assertSame(
+            2,
+            DB::table('app_mobile.usuario_dispositivos')
+                ->where('device_id', $deviceId)
+                ->count()
+        );
     }
 }
 

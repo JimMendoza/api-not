@@ -1,0 +1,1 @@
+"C:\Program Files\PostgreSQL\18\bin\pg_restore.exe" -h 127.0.0.1 -p 5432 -U postgres -d NOMBRE_BASE_DESTINO -c --if-exists -v "C:\laragon\www\app-not\api-not\backup\postgres_full_tramite_20260409_145334.backup"
